@@ -70,7 +70,7 @@ def require_role(*roles:str):
     """
     def dependency(current_user: user_models.User = Depends(get_current_user)):
         db = SessionLocal()
-        role = db.query(user_models.UserInformation.role).filter(user_models.UserInformation.id==current_user.user_id).first()
+        role = db.query(user_models.User.role).filter(user_models.User.id==current_user.id).first()
         logging.info(f"Trying to access the user {current_user} and role: {role[0]}")
 
         if role[0] not in roles:

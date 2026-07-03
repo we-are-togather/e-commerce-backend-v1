@@ -1,5 +1,5 @@
 ﻿from pydantic_settings import BaseSettings, SettingsConfigDict
-
+from pathlib import Path
 
 class Settings(BaseSettings):
     app_name: str = "Medical History API"
@@ -33,3 +33,6 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
+
+UPLOAD_DIR = Path("uploads/products")
+UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
