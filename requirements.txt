@@ -16,3 +16,5 @@ redis==4.5.5
 celery==5.3.1
 python-jose[cryptography]
 python-slugify==8.0.1
+asyncpg
+httpx

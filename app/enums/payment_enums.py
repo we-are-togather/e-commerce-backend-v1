@@ -1,0 +1,34 @@
+from enum import Enum
+
+class PaymentMethod(str, Enum):
+    COD = "COD"
+    CARD = "CARD"
+    BKASH  = "BKASH"
+    NAGAD = "NAGAD"
+    ROCKET = "ROCKET"
+    BANK_TRANSFER = "BANK_TRANSFER"
+    MOBILE_BANKING = "MOBILE_BANKING"
+    WALLET = "WALLET"
+
+class PaymentProvider(str, Enum):
+    SSLCOMMERZ = "SSLCOMMERZ"
+    STRIPE = "STRIPE"
+    PAYPAL = "PAYPAL"
+    BKASH = "BKASH"
+    NAGAD = "NAGAD"
+
+class PaymentStatus(str, Enum):
+    PENDING = "PENDING"
+    AUTHORIZED = "AUTHORIZED"
+    PAID = "PAID"
+    PARTIALLY_PAID = "PARTIALLY_PAID"
+    FAILED = "FAILED"
+    CANCELLED = "CANCELLED"
+    REFUNDED = "REFUNDED"
+    PARTIALLY_REFUNDED = "PARTIALLY_REFUNDED"
+
+class RefundMethod(str, Enum):
+    ORIGINAL_PAYMENT = "ORIGINAL_PAYMENT"
+    BANK_TRANSFER = "BANK_TRANSFER"
+    STORE_CREDIT = "STORE_CREDIT"
+    CASH = "CASH"

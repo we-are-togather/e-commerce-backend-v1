@@ -15,7 +15,11 @@ from datetime import datetime
 class SpecificationSchema(BaseModel):
     label: str
     value: str
+    unit:Optional[str] = None
 
+class SpecificationGroup(BaseModel):
+    group_name:str
+    specification_value:List[SpecificationSchema]
 
 
 
@@ -44,6 +48,7 @@ class VariantAttribute(BaseModel):
     value:str
 
 class Variant(BaseModel):
+    name:Optional[str] = None
     sku:str
     price: float
     compare_at_price:float
@@ -58,7 +63,8 @@ class Variant(BaseModel):
 #     image_url:str
 
 class Image(BaseModel):
-    image_name:str
+    image_url:Optional[str] = None
+    image_name:Optional[str] = None
     alt_text:str
 
 class ImageGroup(BaseModel):
@@ -89,8 +95,8 @@ class Category(BaseModel):
     name:str
     description:str
     is_active:bool
-    parent:str
-
+    parent:Optional[str] = None
+    logo_url:Optional[str] = None
 
 
 class ProductCreateSchema(BaseModel):
@@ -105,7 +111,7 @@ class ProductCreateSchema(BaseModel):
     category: Category
     short_description: str
     description: List[DescriptionSchema]
-    specifications: List[SpecificationSchema]
+    specifications: List[SpecificationGroup]
     
     
     variants:List[Variant]
@@ -136,22 +142,7 @@ class ProductCreateSchema(BaseModel):
 # ============================================
 
 
-class ProductListItemSchema(BaseModel):
-    id: int
-    name: str
-    short_description: List[str]
-    slug:str
-    regular_price: float
-    price: float
 
-
-
-
-class ProductListResponseSchema(BaseResponse):
-    data: List[ProductListItemSchema]
-    total: int
-    page: int
-    limit: int
 
 # ============================================
 #      product response schema
@@ -184,16 +175,15 @@ class VariantAttributeSchema(BaseModel):
     variant_attribute_value:str
 
 
-class Variant(BaseModel):
-    variant_id: int
-    is_default:bool
-    param: List[VariantAttributeSchema]
-    price: float
-    regular_price: float
-    stock: int
-    color_name: Optional[str] = None
-    image_url: Optional[str] = None
-
+# class Variant(BaseModel):
+#     variant_id: int
+#     is_default:bool
+#     param: List[VariantAttributeSchema]
+#     price: float
+#     compare_at_price: float
+#     stock: int
+#     name: Optional[str] = None
+#     image_url: Optional[str] = None
 
 
 class ProductSchema(BaseModel):

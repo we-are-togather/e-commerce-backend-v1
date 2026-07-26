@@ -1,11 +1,57 @@
 from pydantic import(BaseModel, 
                      Field
                     )
-from typing import  Optional, List, Dict
+
+from datetime import datetime
+from typing import Any, Generic, List, Optional, TypeVar, Dict
 
 
-class BaseResponse(BaseModel):
-    status: str = Field(description='status code of the request')
+from pydantic.generics import GenericModel
+
+T = TypeVar("T")
+
+
+class PaginationMeta(BaseModel):
+    page: int
+    per_page: int
+    returned_items: int
+    total_items: int
+    total_pages: int
+    has_next: bool
+    has_previous: bool
+
+
+class SortMeta(BaseModel):
+    field: Optional[str] = None
+    direction: Optional[str] = None
+
+
+class Meta(BaseModel):
+    request_id: Optional[str] = None
+    timestamp: datetime
+    pagination: Optional[PaginationMeta] = None
+    sort: Optional[SortMeta] = None
+    filters: Optional[dict[str, Any]] = None
+
+class ErrorDetail(BaseModel):
+    code: str
+    field: Optional[str] = None
+    message: str
+
+
+class BaseResponse(GenericModel, Generic[T]):
+    status: int = Field(description='status code of the request')
+    success:bool = Field(description='success of the request')
     message: str = Field(description='message of the status')
     lang: str = Field(description='language which you are return')
     data:List[Optional[Dict]]
+    meta:Meta
+
+
+
+class ErrorResponse(BaseModel):
+    success: bool = False
+    message: str
+    errors: List[ErrorDetail] = Field(default_factory=list)
+    meta: Optional[Meta] = None
+

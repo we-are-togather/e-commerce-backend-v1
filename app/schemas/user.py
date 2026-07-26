@@ -4,6 +4,9 @@ from pydantic import (
 )
 from app.schemas.base import BaseResponse
 from datetime import date
+from typing import List, Optional
+from sqlalchemy import Enum
+from app.enums.order_enums import AddressCategory, DefaultBillingAddress, DefaultShippingAddress
 class User(BaseModel):
     name:str
     email:str
@@ -23,3 +26,20 @@ class ShowUser(BaseModel):
 
 class ResponseUser(BaseResponse):
     data:ShowUser
+
+
+class OrderAddress(BaseModel):
+    district: str
+    address: str
+    landmark: Optional[str] = None
+
+    recipient_name: str
+    recipient_contact: str
+    recipient_backup_contact: str
+
+    address_category: AddressCategory = AddressCategory.Home
+    default_shipping_address: DefaultShippingAddress = DefaultShippingAddress.on
+    default_billing_address: DefaultBillingAddress = DefaultBillingAddress.on
+
+class OrderAddressResponse(BaseResponse):
+    data:List[OrderAddress]

@@ -3,8 +3,8 @@ from fastapi import APIRouter, Depends, status, HTTPException, Request, Response
 from fastapi.security import OAuth2PasswordRequestForm
 
 from sqlalchemy.orm import Session
-
-from jose import JWTError, jwt
+from sqlalchemy.ext.asyncio import AsyncSession
+from typing import Annotated
 
 from datetime import datetime, timezone, timedelta
 
@@ -17,15 +17,14 @@ from app.models.user import UserSession, User
 
 from app.db.base import get_db
 from app.core import access_token
-from app.schemas.security import (Token, 
-                                  LogOut, 
-                                  LogOutResponse, 
-                                  TokenResponse, 
-                                  RefreshTokenRequest
-                        )
+from app.schemas.security import ( 
+                                  RefreshTokenRequest )
 
 from app.core.outh2 import get_current_token
 from app.core.access_token import create_access_token
+
+from app.repositories.user_repositories import get_user
+from app.services.user_service import create_new_session
 
 REFRESH_TOKEN_EXPIRY = 2
 
@@ -37,17 +36,15 @@ router = APIRouter(
 
 
 @router.post('/login')
-def login(
+async def login(
     request: Request,
     response: Response,
-    form_data: OAuth2PasswordRequestForm = Depends(),
-    db: Session = Depends(get_db)
+    form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
+    db:Annotated[AsyncSession, Depends(get_db)]
 ):
 
 
-    user = db.query(user_models.User).filter(
-        user_models.User.email == form_data.username
-    ).first()
+    user= await get_user(db, email=form_data.username)
 
     if not user or not Hash.verify(user.password, form_data.password):
         raise HTTPException(
@@ -101,30 +98,8 @@ def login(
     )
 
 
-
-    # Extract device info
-    ip_address = request.headers.get(
-        "x-forwarded-for", request.client.host
-    )
-    
-    user_agent = request.headers.get("user-agent")
-
     # Create session
-    session = UserSession(
-        user_id=user.id,
-        refresh_token=refresh_token,
-        device_name="unknown",
-        device_type="unknown",
-        ip_address=ip_address,
-        user_agent=user_agent,
-        expires_at=expire,
-        is_revoked=False,
-        created_at=datetime.now(timezone.utc),
-        last_used_at=datetime.now(timezone.utc)
-    )
-
-    db.add(session)
-    db.commit()
+    session = await create_new_session(db, request, user.id, refresh_token, expire)
 
     return {
         "access_token": access_token,

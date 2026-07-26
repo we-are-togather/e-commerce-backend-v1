@@ -1,4 +1,5 @@
 from datetime import datetime
+from decimal import Decimal
 from sqlalchemy import (
     Column,
     Integer,
@@ -10,18 +11,17 @@ from sqlalchemy import (
     func,
     Boolean
 )
-from sqlalchemy import Table, Column, Integer, ForeignKey
+from sqlalchemy import Table, Column, Integer, ForeignKey, text
 
 from sqlalchemy.orm import relationship
 from app.db.base import Base
 
-class BaseModel(Base):
-    __abstract__ = True
-    id = Column(Integer, primary_key=True, index=True)
-    created_at = Column(DateTime, default=func.now())
-    deleted_at = Column(DateTime, nullable=True)
-    updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
+from app.models.base import BaseModel
 
+from app.enums.base_enums import (
+    sa_enum,
+    Status
+)
 
 # =========================
 # Product Table
@@ -93,11 +93,12 @@ class ProductVariant(Base):
         Integer,
         ForeignKey("products.id")
     )
-    color_name = Column(String(100))
+    name = Column(String(100))
     price = Column(Float)
     compare_at_price = Column(Float)
     inventory = Column(Integer, default=0)
     status = Column(String)
+    weight = Column(Decimal)
 
     sku = Column(String, unique=True)
     # Relationships
@@ -255,7 +256,7 @@ class Product(BaseModel):
 
     product_code = Column(String(100), unique=True)
 
-    brand = Column(Integer, ForeignKey("brands.id"))
+    brand_id = Column(Integer, ForeignKey("brands.id"))
 
     model = Column(String(100))
 
@@ -354,7 +355,13 @@ class Brand(BaseModel):
     slug = Column(String(100), unique=True, nullable=False)
     logo_url = Column(String(255))
     description = Column(Text)
-    is_active = Column(Boolean, default=True)
+    # is_active = Column(Boolean, default=True)
+    status = Column(
+        sa_enum(Status, "status"),
+        nullable=False,
+        default=Status.inactive,
+        server_default=text("'active'")
+    )
     website_url = Column(String(255))
 
     # Relationships
@@ -376,7 +383,13 @@ class Category(BaseModel):
     name = Column(String(100), nullable=False)
     slug = Column(String(100), unique=True, nullable=False)
     description = Column(Text)
-    is_active = Column(Boolean, default=True)
+    # is_active = Column(Boolean, default=True)
+    status = Column(
+        sa_enum(Status, "status"),
+        nullable=False,
+        default=Status.inactive,
+        server_default=text("'active'")
+    )
     parent_id = Column(Integer, ForeignKey("categories.id"), nullable=True)
     logo_url = Column(String(255))
 
@@ -456,6 +469,7 @@ class SpecificationValue(BaseModel):
     key = Column(String(100), nullable=False)
 
     value = Column(String(255), nullable=False)
+    # unit = Column(String(100), nullable=True)
 
     specification_type_id = Column(
         Integer,
@@ -516,6 +530,10 @@ class Question(BaseModel):
         "Product",
         back_populates="questions"
     )
+    user = relationship(
+        'User',
+        back_populates='questions'
+    )
 
 
 # =========================
@@ -542,6 +560,10 @@ class Review(BaseModel):
     product = relationship(
         "Product",
         back_populates="reviews"
+    )
+    user = relationship(
+        'User',
+        back_populates='reviews'
     )
 
 
@@ -627,3 +649,5 @@ class SearchKeyword(BaseModel):
         "Product",
         back_populates="search_keywords"
     )
+
+
