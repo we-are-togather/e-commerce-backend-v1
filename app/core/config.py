@@ -45,12 +45,15 @@ class Settings(BaseSettings):
         "base-uri 'self'; "
         "form-action 'self';"
     )
-    origins = [
+    ALLOWED_HOSTS: list[str] = ["*"]
+    CORS_ORIGINS: list[str] = []
+    origins:list[str] = [
         "http://localhost:3000",
         "http://localhost:5173",
         "https://example.com",
         "https://www.example.com",
     ]
+
 
     @property
     def database_url(self) -> str:

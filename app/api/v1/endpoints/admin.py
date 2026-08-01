@@ -39,11 +39,16 @@ from app.schemas.promotions import (
 from app.core.outh2 import get_current_user, require_role
 
 
-from app.services import admin_service
+# from app.services import admin_service
+from app.services.admin import (
+    product_service,
+    promotion_service,
+    category_service,
+    brand_service
+)
 
 from app.utils.logger import logging
 
-from app.core.context import get_get_request_id
 
 router = APIRouter(
     prefix='/admin',
@@ -65,7 +70,7 @@ async def create_product(
 ):
     logging.info(f"Product creating session started successfully")
     payload = ProductCreateSchema.model_validate_json(payload)
-    response = await admin_service.add_product(db, payload, files)
+    response = await product_service.add_product(db, payload, files)
     return response
 
 @router.get("/product/list-product")
@@ -78,7 +83,7 @@ async def list_product(
     role:Annotated[User,Depends(require_role("admin"))]
 ):
     filter_param  = ListByFilter.model_validate_json(filter_param)
-    products = await admin_service.get_list_product(db, filter_param, show_per_page, page_num)
+    products = await product_service.get_list_product(db, filter_param, show_per_page, page_num)
     return products
     
 @router.get("/product/get-product/{id}")
@@ -88,7 +93,7 @@ async def get_product(
     user:Annotated[User, Depends(get_current_user)],
     role:Annotated[User,Depends(require_role("admin"))]
 ):
-    return admin_service.get_product(db, id)
+    return product_service.get_product(db, id)
 
 @router.delete('/product/remove-product/{id}')
 async def remove_product(
@@ -97,7 +102,7 @@ async def remove_product(
     user:Annotated[User, Depends(get_current_user)],
     role:Annotated[User,Depends(require_role("admin"))]
 ):
-    is_delete = admin_service.product_delete(db, id)
+    is_delete = product_service.product_delete(db, id)
     if is_delete:
         return BaseResponse(
             status='200',
@@ -127,7 +132,7 @@ async def add_brand(
 ):
     payload = BrandSchema.model_validate_json(payload)
 
-    new_brand  = await admin_service.create_brand(db, payload, logo)
+    new_brand  = await product_service.create_brand(db, payload, logo)
     
     return BrandResponseSchema(
         status="201",
@@ -152,7 +157,7 @@ async def list_brands(
     role:Annotated[User, Depends(require_role("admin"))]
 ):
     
-    response = await admin_service.list_brand(db, int(page_num), int(per_page), filter_param)
+    response = await brand_service.list_brand(db, int(page_num), int(per_page), filter_param)
     return response
 
 
@@ -165,7 +170,7 @@ async def delete_brand(
 ):
     logging.info(f"trying to remove brand from endpoint id: {id}")
     
-    is_removed = await admin_service.remove_brand(db, id)
+    is_removed = await brand_service.remove_brand(db, id)
     if not is_removed:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Brand not found")
     logging.info(f"remove brand from endpoint id: {id}")
@@ -190,7 +195,7 @@ async def add_category(
 ):
     payload = CategorySchema.model_validate_json(payload)
 
-    new_category  = await admin_service.create_category(db, payload, logo)
+    new_category  = await category_service.create_category(db, payload, logo)
     
     return CategoryResponseSchema(
         status="201",
@@ -215,26 +220,16 @@ def update_category():
 
 @router.get('/category')
 async def list_categories(
+    per_page,
+    page_num,
+    filter_param:Annotated[str,Form(...)],
     db:Annotated[AsyncSession, Depends(get_db)],
     user:Annotated[User, Depends(get_current_user)],
+    
     role:Annotated[User,Depends(require_role("admin"))]
 ):
-    categories = await admin_service.list_category(db)
-    category_list = [
-        CategorySchema(
-            name=category.name,
-            description=category.description,
-            is_active=category.is_active,
-            parent_id=category.parent_id,
-            logo_url=category.logo_url
-        ) for category in categories
-    ]
-    return CategoryListResponseSchema(
-        status="200",
-        message="Categories retrieved successfully",
-        lang="en",
-        data=category_list
-    )
+    response = await category_service.list_category(db, per_page, page_num, filter_param)
+    return response
 
 @router.delete('/category/delete-category/{category_id}')
 async def remove_category(
@@ -310,7 +305,7 @@ def add_promotion(payload:str=File(...),
     ):
         
         payload = PromotionSchema.model_validate_json(payload)
-        response = admin_service.add_promotion(db, payload)
+        response = promotion_service.add_promotion(db, payload)
         return response
 
 
@@ -324,7 +319,7 @@ async def get_promotins_list(
     role:Annotated[User,Depends(require_role("admin"))]
 ):
     filter_param = PromotionFilter.model_validate_json(filter_param)
-    response = await admin_service.get_promotion_list(db, show_per_page, page_num, filter_param)
+    response = await promotion_service.get_promotion_list(db, show_per_page, page_num, filter_param)
     return response
 
 
@@ -335,7 +330,7 @@ async def get_promotion(
     user:Annotated[User, Depends(get_current_user)],
     role:Annotated[User,Depends(require_role("admin"))]
 ):
-    response = await admin_service.get_promotion(db, id)
+    response = await promotion_service.get_promotion(db, id)
     return response
 
 @router.delete("/promotions/promotions/{id}")
@@ -345,7 +340,7 @@ async def delete_promotion(
     user:Annotated[User, Depends(get_current_user)],
     role:Annotated[User,Depends(require_role("admin"))]
 ):
-    response = await admin_service.delete_promotion(db, id)
+    response = await promotion_service.delete_promotion(db, id)
     return response
 
 @router.put("/promotions/promotions/{id}")
@@ -356,7 +351,7 @@ async def update_promotion(
     user:Annotated[User, Depends(get_current_user)],
     role:Annotated[User,Depends(require_role("admin"))]
 ):
-    response = await admin_service.update_promotion(db, payload, id)
+    response = await promotion_service.update_promotion(db, payload, id)
     return response
 
     

@@ -9,19 +9,19 @@ from app.services.orders.discounts import (
     PromotionActionValidator
 )
 from app.repositories.order_repositories import (
-    get_promotion,
-    get_target
+    get_promotions_by_coupon_code,
+    # get_target
 )
 
 
 def get_discount(db,order, coupon_code):
     
-    promotion = get_promotion(db, coupon_code)
-    targets = get_target(db, promotion.targets)
+    promotion_coupon = get_promotions_by_coupon_code(db, coupon_code)
+    # targets = get_target(db, promotion.targets)
 
-    if promotion_matches(promotion, order):  # promotion rule
+    if promotion_matches(promotion_coupon.promotions, order):  # promotion rule
         target_eval = TargetEvaluation()
-        matches_results = target_eval.get_matching_items(order, promotion.targets)
+        matches_results = target_eval.get_matching_items(order, promotion_coupon.promotions.targets)
         actions = PromotionActionValidator()
         result = actions.execute(order, matches_results)
         return result

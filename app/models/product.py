@@ -1,5 +1,5 @@
 from datetime import datetime
-from decimal import Decimal
+
 from sqlalchemy import (
     Column,
     Integer,
@@ -9,7 +9,7 @@ from sqlalchemy import (
     ForeignKey,
     DateTime,
     func,
-    Boolean
+    Boolean, DECIMAL
 )
 from sqlalchemy import Table, Column, Integer, ForeignKey, text
 
@@ -98,7 +98,7 @@ class ProductVariant(Base):
     compare_at_price = Column(Float)
     inventory = Column(Integer, default=0)
     status = Column(String)
-    weight = Column(Decimal)
+    weight = Column(DECIMAL(10, 2), nullable=True)
 
     sku = Column(String, unique=True)
     # Relationships

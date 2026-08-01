@@ -178,4 +178,8 @@ class FulfillmentStatus(str, Enum):
     DELIVARED = "DELIVERED"
 
 
-
+class WarehouseStatus(str, Enum):
+    ACTIVE = "ACTIVE"
+    INACTIVE = "INACTIVE"
+    MAINTENANCE = "MAINTENANCE"
+    CLOSED = "CLOSED"

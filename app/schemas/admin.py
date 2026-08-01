@@ -1,6 +1,6 @@
 from pydantic import BaseModel
 from typing import Any, List, Optional, Dict
-from app.schemas.base import BaseResponse, Pagination
+from app.schemas.base import BaseResponse
 from datetime import datetime
 
 from app.schemas.product import (
@@ -44,15 +44,13 @@ class BrandSchema(BaseModel):
     is_active:Optional[bool] = None
 
 
-class BrandListData(BaseModel):
-    items:List[BrandSchema]
-    pagination: Pagination
+
 
 class BrandResponseSchema(BaseResponse):
     data: BrandSchema
 
 class BrandListResponseSchema(BaseResponse):
-    data: BrandListData
+    data: List[BrandSchema]
 
 class BrandFilter(BaseModel):
     status:Optional[Status] = None
@@ -69,6 +67,11 @@ class CategorySchema(BaseModel):
     status:Status
     parent_id: Optional[int] = None
     logo_url: Optional[str] = None
+
+class CategoryFilter(BaseModel):
+    status:Optional[Status] = None
+    start_date:Optional[datetime] = None
+    end_date:Optional[datetime] = None
 
 class CategoryResponseSchema(BaseResponse):
     data: CategorySchema

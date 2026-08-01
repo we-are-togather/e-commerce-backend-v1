@@ -8,7 +8,8 @@ from sqlalchemy import (
     DateTime,
     Numeric,
     BigInteger,
-    Text
+    Text,
+    JSON
 )
 from sqlalchemy import ForeignKey
 from sqlalchemy.orm import relationship
@@ -19,6 +20,8 @@ from app.enums.payment_enums import PaymentStatus
 
 from app.models.base import BaseModel
 from app.enums.base_enums import sa_enum
+
+# from app.models.user import OrderAdresses
 
 
 
@@ -37,10 +40,15 @@ class Order(BaseModel):
     customer_id = Column(
         BigInteger,
         ForeignKey("users.id", ondelete="RESTRICT"),
-        nullable=False,
-        index=True,
+        nullable=True
     )
 
+    address_id = Column(
+        Integer, 
+        ForeignKey("order_addresses.id", ondelete="CASCADE"),
+        nullable=True
+    )
+    
     # -------------------------
     # Order Information
     # -------------------------
@@ -52,14 +60,14 @@ class Order(BaseModel):
     )
 
     status = Column(
-        sa_enum(OrderStatus),
+        sa_enum(OrderStatus, "order_status"),
         default=OrderStatus.PENDING,
         nullable=False,
         index=True,
     )
 
     fulfillment_status = Column(
-        sa_enum(FulfillmentStatus),
+        sa_enum(FulfillmentStatus, "fullfillment_status"),
         default=FulfillmentStatus.PENDING,
         nullable=False,
         index=True,
@@ -152,9 +160,8 @@ class Order(BaseModel):
     )
 
     addresses = relationship(
-        "OrderAddress",
-        back_populates="order",
-        cascade="all, delete-orphan",
+        "OrderAdresses",
+        back_populates="order"
     )
 
     timeline = relationship(
@@ -193,6 +200,10 @@ class Order(BaseModel):
         cascade="all, delete-orphan",
     )
 
+    delivery = relationship(
+        "DeliveryDetail",
+        back_populates="order"
+    )
 
 
 class OrderItem(BaseModel):
@@ -282,7 +293,7 @@ class OrderTimeline(BaseModel):
         nullable=True,
     )
 
-    metadata = Column(
+    metadata_ = Column(
         JSON,
         nullable=True,
     )
@@ -322,7 +333,7 @@ class Payment(BaseModel):
     )
 
     payment_status = Column(
-        sa_enum(PaymentStatus),
+        sa_enum(PaymentStatus, "payment_status"),
         default=PaymentStatus.PENDING,
         nullable=False,
     )
@@ -476,7 +487,7 @@ class DeliveryDetail(BaseModel):
     )
 
     type = Column(
-        Enum(DeliveryType),
+        sa_enum(DeliveryType, "delivery_type"),
         nullable=False
     )
 
@@ -525,7 +536,7 @@ class ShippingRate(BaseModel):
     )
 
     zone_id = Column(
-        BigInteger,
+        Integer,
         ForeignKey("shipping_zones.id", ondelete="SET NULL"),
         nullable=True,
         index=True,
@@ -593,7 +604,67 @@ class ShippingRate(BaseModel):
         nullable=False,
     )
 
-    zone = relationship("ShippingZone")
+    zone = relationship("ShippingZone", back_populates="rates")
+
+class ShippingZone(BaseModel):
+    __tablename__ = "shipping_zones"
+
+    zone_code = Column(
+        String(30),
+        unique=True,
+        nullable=False,
+        index=True,
+    )
+
+    zone_name = Column(
+        String(100),
+        nullable=False,
+        index=True,
+    )
+
+    country = Column(
+        String(100),
+        nullable=False,
+    )
+
+    state = Column(
+        String(100),
+        nullable=True,
+    )
+
+    city = Column(
+        String(100),
+        nullable=True,
+    )
+
+    postal_code = Column(
+        String(20),
+        nullable=True,
+    )
+
+    priority = Column(
+        Integer,
+        default=0,
+        nullable=False,
+    )
+
+    is_active = Column(
+        Boolean,
+        default=True,
+        nullable=False,
+    )
+
+    description = Column(
+        Text,
+        nullable=True,
+    )
+
+
+    rates = relationship(
+        "ShippingRate",
+        back_populates="zone",
+        cascade="all, delete-orphan",
+    )
 
 class Shipment(BaseModel):
 
@@ -616,7 +687,7 @@ class Shipment(BaseModel):
     )
 
     warehouse_id = Column(
-        BigInteger,
+        Integer,
         ForeignKey("warehouses.id", ondelete="SET NULL"),
         nullable=True,
         index=True,
@@ -701,7 +772,9 @@ class Shipment(BaseModel):
         back_populates="shipments",
     )
 
-    warehouse = relationship("Warehouse")
+    warehouse = relationship("Warehouse",
+                             back_populates="shipment")
+    
 
     items = relationship(
         "ShipmentItem",
@@ -798,7 +871,7 @@ class OrderDiscount(BaseModel):
         back_populates="discounts",
     )
 
-    promotion = relationship("Promotion")
+    promotion = relationship("Promotions")
 
 
 
@@ -850,7 +923,7 @@ class OrderItemDiscount(BaseModel):
 
     order_item = relationship("OrderItem")
 
-    promotion = relationship("Promotion")
+    promotion = relationship("Promotions")
 
 
 class InventoryReservation(BaseModel):
@@ -1321,8 +1394,8 @@ class OrderAllocation(BaseModel):
     )
 
     warehouse_id = Column(
-        BigInteger,
-        ForeignKey("warehouses.id", ondelete="RESTRICT"),
+        Integer,
+        ForeignKey("warehouses.id", ondelete="CASCADE"),
         nullable=False,
         index=True,
     )
@@ -1363,9 +1436,107 @@ class OrderAllocation(BaseModel):
 
     order_item = relationship("OrderItem")
 
-    warehouse = relationship("Warehouse")
+    warehouse = relationship("Warehouse", back_populates='allocation')
 
+class Warehouse(BaseModel):
+    __tablename__ = "warehouses"
 
+    warehouse_code = Column(
+        String(30),
+        unique=True,
+        nullable=False,
+        index=True,
+    )
+
+    name = Column(
+        String(150),
+        nullable=False,
+    )
+
+    description = Column(
+        Text,
+        nullable=True,
+    )
+
+    contact_person = Column(
+        String(150),
+        nullable=True,
+    )
+
+    phone = Column(
+        String(30),
+        nullable=True,
+    )
+
+    email = Column(
+        String(150),
+        nullable=True,
+    )
+
+    address_line1 = Column(
+        String(255),
+        nullable=False,
+    )
+
+    address_line2 = Column(
+        String(255),
+        nullable=True,
+    )
+
+    city = Column(
+        String(100),
+        nullable=False,
+    )
+
+    state = Column(
+        String(100),
+        nullable=True,
+    )
+
+    postal_code = Column(
+        String(20),
+        nullable=True,
+    )
+
+    country = Column(
+        String(100),
+        nullable=False,
+    )
+
+    latitude = Column(
+        Numeric(10, 7),
+        nullable=True,
+    )
+
+    longitude = Column(
+        Numeric(10, 7),
+        nullable=True,
+    )
+
+    timezone = Column(
+        String(50),
+        nullable=True,
+    )
+
+    is_default = Column(
+        Boolean,
+        default=False,
+        nullable=False,
+    )
+
+    status = Column(
+        sa_enum(WarehouseStatus, "warehouse_status"),
+        nullable=True,
+        default = WarehouseStatus.ACTIVE
+    )
+
+    notes = Column(
+        Text,
+        nullable=True,
+    )
+
+    allocation = relationship("OrderAllocation", cascade="all, delete-orphan", back_populates="warehouse")
+    shipment = relationship("Shipment", cascade="all, delete-orphan", back_populates="warehouse")
 
 
 

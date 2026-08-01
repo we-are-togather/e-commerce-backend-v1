@@ -1,5 +1,3 @@
-
-
 from app.repositories import user_repositories
 
 from app.schemas.user import OrderAddress , OrderAddressResponse
@@ -16,6 +14,9 @@ from app.schemas.user import (
     ResponseUser,
     OrderAddress
 )
+
+from app.schemas.base import BaseResponse, Meta
+from app.core.context import get_request_id
 
 async def create_new_user(db, payload):
     user = await user_repositories.get_user(db, email=payload.email)
@@ -36,7 +37,8 @@ async def create_new_user(db, payload):
     new_user = await user_repositories.create_user(db, data)
 
     return ResponseUser(
-        status="201",
+        status=status.HTTP_201_CREATED,
+        success=True,
         message="User created successfully",
         lang="en",
         data=ShowUser(
@@ -46,6 +48,10 @@ async def create_new_user(db, payload):
             dob=new_user.dob,
             gender=new_user.gender,
             role=new_user.role
+        ),
+        meta=Meta(
+            request_id=get_request_id(),
+            timestamp = datetime.now(tz=timezone.utc)
         )
     )
 
@@ -105,20 +111,30 @@ def add_address(db, payload:OrderAddress, user_id):
         ) for address in addresses
     ]
     return OrderAddressResponse(
-        status='201',
+        status=status.HTTP_201_CREATED,
         message="Address Added Successfully",
-        lang='eng',
-        data=addresses
+        success=True,
+        lang='en',
+        data=addresses,
+        meta=Meta(
+                    request_id=get_request_id(),
+                    timestamp = datetime.now(tz=timezone.utc)
+                )
     )
 
 def remove_address(db, address_id):
     is_removed = user_repositories.remove_address(db, address_id)
     if is_removed:
         return BaseResponse(
-            status="200",
+            status=status.HTTP_200_OK,
             message=f"address with id: {address_id} removed successfully",
-            lang='eng',
-            data = []
+            success=True,
+            lang='en',
+            data = [],
+            meta=Meta(
+                        request_id=get_request_id(),
+                        timestamp = datetime.now(tz=timezone.utc)
+                    )
         )
     else:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f'address with id: {address_id} not found')
@@ -140,18 +156,24 @@ def get_all_adddress(db, user_id):
         ) for address in addresses
     ]
     return OrderAddressResponse(
-        status='201',
+        status=status.HTTP_201_CREATED,
         message="Address Added Successfully",
-        lang='eng',
-        data=addresses
+        success=True,
+        lang='en',
+        data=addresses,
+        meta=Meta(
+                    request_id=get_request_id(),
+                    timestamp = datetime.now(tz=timezone.utc)
+                )
     )
 
 def get_address(db, address_id):
     address = user_repositories.get_address(db, address_id)
     return OrderAddressResponse(
-        status='200',
+        status=status.HTTP_200_OK,
         message='success',
-        lang='eng',
+        success=True,
+        lang='en',
         data = [
             OrderAddress(
             district=address.district,
@@ -165,15 +187,20 @@ def get_address(db, address_id):
             default_shipping_address=address.default_shipping_address,
             default_billing_address=address.default_billing_address
         )
-        ]
+        ],
+        meta=Meta(
+                    request_id=get_request_id(),
+                    timestamp = datetime.now(tz=timezone.utc)
+                )
     )
 
 def update_address(db,payload, address_id):
     address = user_repositories.update_address(db, payload, address_id)
     return OrderAddressResponse(
-        status='200',
+        status=status.HTTP_200_OK,
         message='success',
-        lang='eng',
+        success=True,
+        lang='en',
         data = [
             OrderAddress(
             district=address.district,
@@ -187,5 +214,9 @@ def update_address(db,payload, address_id):
             default_shipping_address=address.default_shipping_address,
             default_billing_address=address.default_billing_address
         )
-        ]
+        ],
+        meta=Meta(
+                    request_id=get_request_id(),
+                    timestamp = datetime.now(tz=timezone.utc)
+                )
     )

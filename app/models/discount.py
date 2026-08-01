@@ -108,10 +108,10 @@ class PromotionType(BaseModel):
 class PromotionRule(BaseModel):
     __tablename__ = "promotion_rules"
     promotion_id = Column(Integer,ForeignKey("promotions.id", ondelete="CASCADE"),nullable=False,index=True,)
-    rule_type = Column(sa_enum(RuleType),nullable=False,)
+    rule_type = Column(sa_enum(RuleType, "rule_type"),nullable=False,)
 
     # =, !=, >, >=, <, <=, IN
-    operator = Column(sa_enum(RuleOperator),default=RuleOperator.EQUAL,nullable=False,)
+    operator = Column(sa_enum(RuleOperator, "rule_operator"),default=RuleOperator.EQUAL,nullable=False,)
     
 
     # Value of the rule
@@ -264,43 +264,6 @@ class PromotionAction(BaseModel):
         )
 
 
-
-
-class OrderDiscount(BaseModel):
-    __tablename__ = "order_discounts"
-
-    order_id = Column(
-        Integer,
-        ForeignKey("orders.id", ondelete="CASCADE"),
-        nullable=False,
-        index=True,
-    )
-
-    promotion_id = Column(
-        Integer,
-        ForeignKey("promotions.id"),
-        nullable=True,
-    )
-
-    promotion_name = Column(
-        String(150),
-        nullable=False,
-    )
-
-    discount_amount = Column(
-        Numeric(12, 2),
-        nullable=False,
-    )
-
-
-    order = relationship(
-        "Order",
-        back_populates="discounts",
-    )
-
-    promotion = relationship(
-        "Promotions",
-    )
 
 class PromotionCoupon(BaseModel):
     __tablename__ = "promotion_coupons"

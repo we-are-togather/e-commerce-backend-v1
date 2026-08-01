@@ -15,7 +15,7 @@ from app.enums.discount_enums import (
     PromotionStatus
 )
 
-from app.schemas.base import BaseResponse, Pagination
+from app.schemas.base import BaseResponse
 
 
 # --------------------------
@@ -139,12 +139,9 @@ class PromotionCreate(BaseModel):
 
 
 
-class PromotionListData(BaseModel):
-    items:List[PromotionCreate]
-    pagination: Pagination
 
 class PromotionListResponse(BaseResponse):
-    data:PromotionListData
+    data: List[PromotionCreate]
 
 class PromotionResponse(BaseResponse):
     data:PromotionCreate

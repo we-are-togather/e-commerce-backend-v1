@@ -154,9 +154,30 @@ async def create_category(db:AsyncSession, data):
     return category
 
 
-async def list_category(db):
+async def list_category(db,offset, page_num, filter_param):
     category_repo = BaseGeneric(Category, db)
-    return await category_repo.all()
+    filters = []
+    if filter_param.status is not None:
+        filters.append(Brand.status == filter_param.status)
+    if filter_param.start_date is not None:
+        filters.append(Brand.created_at >= filter_param.start_date)
+    if filter_param.end_date is not None:
+        filters.append(Brand.created_at <= filter_param.end_date)
+
+    categories  = await category_repo.paginate(
+        page=page_num,
+        per_page=offset,
+        filters=filters,
+        order_by = [Brand.created_at.desc()]
+    )
+    total = await category_repo.count(filter=filters)
+
+    return {
+        "items":categories,
+        "total":total,
+        "page": page_num,
+        "per_page": offset
+    }
 
 async def get_category_by_name(db, name:str = None, cat_id= None):
     category_repo = BaseGeneric(Category, db)
@@ -404,6 +425,7 @@ async def get_promotion_list(db:AsyncSession, offset, page_num, filter_param):
 
 async def get_promotion(db, id):
     promotion_repo = BaseGeneric(Promotions, db)
+    filters = []
     promotion = await promotion_repo.first(
         filters=[
             Promotions.id == id

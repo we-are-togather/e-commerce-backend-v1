@@ -18,3 +18,5 @@ python-jose[cryptography]
 python-slugify==8.0.1
 asyncpg
 httpx
+aiofiles
+requests

@@ -45,7 +45,7 @@ class User(BaseModel):
     gender = Column(String(20), nullable=False)
 
     role = Column(Enum(UserRole), default=UserRole.USER, nullable=False)
-    user_type = Column(sa_enum(CustomerGroupType), default=CustomerGroupType.RETAIL, server_default=CustomerGroupType.RETAIL)
+    user_type = Column(sa_enum(CustomerGroupType, "customer_group_type"), default=CustomerGroupType.RETAIL, server_default=CustomerGroupType.RETAIL)
 
     # Relationships (optional but useful later)
     reviews = relationship("Review", back_populates="user")
@@ -85,5 +85,6 @@ class OrderAdresses(BaseModel):
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"))
     
     user = relationship("User", back_populates="order_addresses")
+    order = relationship("Order", back_populates="addresses")
     deliveries = relationship("DeliveryDetail", back_populates="order_address", cascade="all, delete")
 
