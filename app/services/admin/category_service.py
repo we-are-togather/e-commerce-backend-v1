@@ -167,6 +167,34 @@ async def update_logo(db, category_id, logo):
             timestamp=datetime.now(tz=timezone.utc)
         )
     )
+
+async def delete_category(db, category_id):
+    category = await admin_repositores.get_category_by_name(db, cat_id=category_id)
+    if not category:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Category not found")
+    logo_path = category.logo_url
+
+    try:
+        await db.delete(category)
+        await db.commit()
+
+        if logo_path:
+            await remove_file(logo_path)
+    except Exception:
+        await db.rollback()
+        raise
+    
+    return BaseResponse(
+        status=status.HTTP_200_OK,
+        success=True,
+        message="Category deleted successfully",
+        lang="en",
+        data = [],
+        meta=Meta(
+            request_id=get_request_id(),
+            timestamp=datetime.now(tz=timezone.utc)
+        )
+    )
     
 
     

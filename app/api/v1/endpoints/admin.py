@@ -14,7 +14,6 @@ from app.schemas.product import (ProductCreateSchema,
                                  ProductCreate
 )
 
-from app.repositories.admin_repositores import get_category_by_name
 
 from app.schemas.user import (
     User
@@ -267,26 +266,15 @@ async def list_categories(
     response = await category_service.list_category(db, filters)
     return response
 
-@router.delete('/category/delete-category/{category_id}')
+@router.delete('/category/{category_id}')
 async def remove_category(
     category_id: int,
     db:Annotated[AsyncSession, Depends(get_db)],
     user:Annotated[User, Depends(get_current_user)],
     role:Annotated[User,Depends(require_role("admin"))]
 ):
-    category = await get_category_by_name(db, cat_id=category_id)
-    if not category:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Category not found")
-    
-    db.delete(category)
-    db.commit()
-    
-    return BaseResponse(
-        status="200",
-        message="Category deleted successfully",
-        lang="en",
-        data = []
-    )
+    response = await category_service.delete_category(db, category_id)
+    return response
 
 
 #===========================================
