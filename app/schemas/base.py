@@ -14,7 +14,7 @@ T = TypeVar("T")
 class PaginationMeta(BaseModel):
     page: int
     per_page: int
-    returned_items: int
+    returned_items: Optional[int] = None
     total_items: int
     total_pages: int
     has_next: bool

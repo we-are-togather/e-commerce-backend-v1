@@ -284,7 +284,7 @@ async def base_update(db, model, payload, filters):
     if obj is None:
         raise HTTPException(404, detail=f"{model.__name__} not found")
 
-    update_data = payload.model_dump(exclude_unset=True)
+    update_data = payload.model_dump(exclude_unset=True) if type(payload) != dict else payload
     if not update_data:
         return obj
 

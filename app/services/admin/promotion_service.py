@@ -26,7 +26,7 @@ from app.schemas.base import *
 
 from app.utils.logger import logging
 from app.core.context import get_request_id
-from app.utils.helper import save_image
+from app.utils.helper.file_helper import save_image
 
 async def add_promotion(db, payload:PromotionCreate):
 

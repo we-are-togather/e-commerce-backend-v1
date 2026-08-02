@@ -20,3 +20,4 @@ asyncpg
 httpx
 aiofiles
 requests
+Pillow

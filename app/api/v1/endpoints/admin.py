@@ -3,7 +3,8 @@ from sqlalchemy.orm import Session
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List, Annotated
 from pathlib import Path
-import shutil
+from datetime import datetime, timezone
+
 
 from app.db.base import get_db
 
@@ -20,21 +21,25 @@ from app.schemas.user import (
 )
 from app.schemas.admin import (
     BrandSchema,
-    BrandResponseSchema,
-    BrandListResponseSchema,
-
     CategorySchema,
     CategoryResponseSchema,
-    CategoryListResponseSchema,
 
     ListByFilter,
 
-    PromotionSchema
+    PromotionSchema,
+
+    CategoryFilter,
+    CategoryUpdateSchema
 )
 
 from app.schemas.promotions import (
     PromotionFilter
 )
+
+from app.schemas.base import (
+    Meta
+)
+
 
 from app.core.outh2 import get_current_user, require_role
 
@@ -48,6 +53,7 @@ from app.services.admin import (
 )
 
 from app.utils.logger import logging
+from app.core.context import get_request_id
 
 
 router = APIRouter(
@@ -132,20 +138,9 @@ async def add_brand(
 ):
     payload = BrandSchema.model_validate_json(payload)
 
-    new_brand  = await product_service.create_brand(db, payload, logo)
+    response  = await brand_service.create_brand(db, payload, logo)
     
-    return BrandResponseSchema(
-        status="201",
-        message="Brand added successfully",
-        lang="en",
-        data=BrandSchema(
-            brand_name=new_brand.name,
-            description=new_brand.description,
-            website_url=new_brand.website_url,
-            logo_url=new_brand.logo_url,
-            status=new_brand.status
-        )
-    )
+    return response
 
 @router.get('/brand/list-brand')
 async def list_brands(
@@ -175,10 +170,15 @@ async def delete_brand(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Brand not found")
     logging.info(f"remove brand from endpoint id: {id}")
     return BaseResponse(
-        status="200",
+        status=status.HTTP_200_OK,
         message="Brand deleted successfully",
+        success=True,
         lang="en",
-        data = []
+        data = [],
+        meta = Meta(
+            request_id=get_request_id(),
+            timestamp=datetime.now(tz=timezone.utc)
+        )
     )
 
 
@@ -198,37 +198,73 @@ async def add_category(
     new_category  = await category_service.create_category(db, payload, logo)
     
     return CategoryResponseSchema(
-        status="201",
+        status=status.HTTP_201_CREATED,
         message="Category added successfully",
+        success=True,
         lang="en",
         data=CategorySchema(
+            category_id=new_category.id,
             name=new_category.name,
             description=new_category.description,
-            is_active=new_category.is_active,
+            # is_active=new_category.is_active,
             parent_id=new_category.parent_id,
+            status=new_category.status,
             logo_url=new_category.logo_url
+        ),
+        meta=Meta(
+            request_id=get_request_id(),
+            timestamp=datetime.now(tz=timezone.utc)
         )
     )
 
 @router.get("/category/{id}")
-def get_category():
-    pass
+async def get_category(
+    id:int,
+    db:Annotated[AsyncSession, Depends(get_db)],
+    user:Annotated[User, Depends(get_current_user)],
+    role:Annotated[User, Depends(require_role("admin"))]
+):
+    response = await category_service.get_category(db, id)
+    return response
 
-@router.put("/category/{id}")
-def update_category():
-    pass
+
+@router.patch("/category/{category_id}")
+async def update_category(
+    category_id:int,
+    payload:CategoryUpdateSchema,
+    db:Annotated[AsyncSession, Depends(get_db)],
+    user:Annotated[User, Depends(get_current_user)],
+    role:Annotated[User,Depends(require_role("admin"))]
+):
+    response = await category_service.update_category(db, payload, category_id)
+    return response
+
+@router.patch("/category/{category_id}/image")
+async def update_category_logo(
+    category_id: int,
+    logo: Annotated[
+        UploadFile,
+        File(
+            description="Category logo image"
+        ),
+    ],
+    db: Annotated[AsyncSession, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+    _: Annotated[User, Depends(require_role("admin"))],
+):
+    response = await category_service.update_logo(db,category_id, logo)
+    return response
+
 
 @router.get('/category')
 async def list_categories(
-    per_page,
-    page_num,
-    filter_param:Annotated[str,Form(...)],
+    filters:Annotated[CategoryFilter, Depends()],
     db:Annotated[AsyncSession, Depends(get_db)],
     user:Annotated[User, Depends(get_current_user)],
     
     role:Annotated[User,Depends(require_role("admin"))]
 ):
-    response = await category_service.list_category(db, per_page, page_num, filter_param)
+    response = await category_service.list_category(db, filters)
     return response
 
 @router.delete('/category/delete-category/{category_id}')

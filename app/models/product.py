@@ -379,9 +379,10 @@ class Category(BaseModel):
     '''
     The Category table represents the different categories of products available in the store. Each category can have multiple products associated with it. For example, there might be categories like Electronics, Clothing, Home Appliances, etc. Each product can be linked to a specific category, allowing customers to filter products by category and providing additional information about the type of product.'''
     __tablename__ = "categories"
-
+    id = Column(Integer, primary_key=True, index=True)
     name = Column(String(100), nullable=False)
-    slug = Column(String(100), unique=True, nullable=False)
+    slug = Column(String(100), nullable=False)
+    full_slug = Column(String(1000), nullable=False, unique=True, index=True)
     description = Column(Text)
     # is_active = Column(Boolean, default=True)
     status = Column(
@@ -390,7 +391,7 @@ class Category(BaseModel):
         default=Status.inactive,
         server_default=text("'active'")
     )
-    parent_id = Column(Integer, ForeignKey("categories.id"), nullable=True)
+    parent_id = Column(Integer, ForeignKey("categories.id", ondelete='SET NULL'), nullable=True)
     logo_url = Column(String(255))
 
     # Relationships
@@ -399,7 +400,16 @@ class Category(BaseModel):
         back_populates="cat",
         cascade="all, delete"
     )
-    parent = relationship("Category", remote_side="Category.id", backref="subcategories")
+    parent = relationship(
+        "Category",
+        remote_side=[id],
+        back_populates="children",
+    )
+
+    children = relationship(
+        "Category",
+        back_populates="parent",
+    )
 
 
 

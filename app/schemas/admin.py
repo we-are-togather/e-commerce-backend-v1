@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import Any, List, Optional, Dict
 from app.schemas.base import BaseResponse
 from datetime import datetime
@@ -64,14 +64,26 @@ class CategorySchema(BaseModel):
     category_id:Optional[int] = None
     name:str
     description:str
-    status:Status
+    status:Optional[Status]  =None
     parent_id: Optional[int] = None
     logo_url: Optional[str] = None
+    product_associated:Optional[int]= None
 
+class CategoryUpdateSchema(BaseModel):
+    name: str | None = None
+    description: str | None = None
+    parent_id: int | None = None
+    status: Status | None = None
+    
 class CategoryFilter(BaseModel):
+    page_num: int = Field(default=1, ge=1)
+    per_page: int = Field(default=20, ge=1, le=100)
+    search: str | None = None
     status:Optional[Status] = None
     start_date:Optional[datetime] = None
     end_date:Optional[datetime] = None
+    sort_by: str = "created_at"
+    sort_order: str = "desc"
 
 class CategoryResponseSchema(BaseResponse):
     data: CategorySchema

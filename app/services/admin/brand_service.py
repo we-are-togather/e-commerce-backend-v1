@@ -22,8 +22,8 @@ from app.core.context import get_request_id
 
 from app.repositories import admin_repositores 
 from app.core.config import UPLOAD_DIR
-from app.utils.helper import save_image
-
+from app.utils.helper.file_helper import save_image
+from app.enums.image_enums import ImageType
 
 
 async def create_brand(db, payload, logo):
@@ -31,7 +31,7 @@ async def create_brand(db, payload, logo):
     brand_path.mkdir(parents=True, exist_ok=True)
     file_path = Path.joinpath(brand_path, logo.filename)
 
-    await save_image(file_path, logo)
+    await save_image(file_path, logo, ImageType.BRAND)
 
     brand_data = {
         "name": payload.brand_name,
@@ -56,7 +56,7 @@ async def create_brand(db, payload, logo):
         ),
         meta = Meta(
             request_id=get_request_id(),
-            timestamp=datetime.now(tz=timezone.info)
+            timestamp=datetime.now(tz=timezone.utc)
         )
     )
     return response
@@ -111,7 +111,7 @@ async def list_brand(db, page_num, show_per_page, filter_param):
                 field='created_at',
                 direction='desc'
             ),
-            filters=filter_param
+            filters=filter_param.model_dump(exclude_none=True)
         )
     )
     

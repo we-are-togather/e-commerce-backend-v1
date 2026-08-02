@@ -50,7 +50,8 @@ from app.schemas.base import *
 
 from app.utils.logger import logging
 from app.core.context import get_request_id
-from app.utils.helper import save_image
+from app.utils.helper.file_helper import save_image
+from app.enums.image_enums import ImageType
 
 async def add_variants(db,product, variants):
     for var in variants:
@@ -207,7 +208,7 @@ async def add_product(db, payload, files):
     os.makedirs(product_path, exist_ok=True)
     for file in files:
         file_path = Path.joinpath(product_path, slugify(file.filename))
-        await save_image(file_path, file)
+        await save_image(file_path, file, ImageType.PRODUCT)
 
     await add_images(db, product, payload.image_groups)
     await add_videos(db, product, payload.video)

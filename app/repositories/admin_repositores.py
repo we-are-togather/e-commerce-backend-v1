@@ -1,6 +1,7 @@
 from unittest import skip
 from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import or_
 from fastapi import HTTPException, status
 
 from app.models.product import (
@@ -36,6 +37,10 @@ from app.models.discount import (
     PromotionAction,
     PromotionCoupon,
     PromotionType
+)
+
+from app.schemas.admin import (
+    CategoryFilter
 )
 
 from app.schemas.admin import (
@@ -154,29 +159,46 @@ async def create_category(db:AsyncSession, data):
     return category
 
 
-async def list_category(db,offset, page_num, filter_param):
+async def list_category(db,filter_param:CategoryFilter):
     category_repo = BaseGeneric(Category, db)
-    filters = []
+    filters = [Category.deleted_at.is_(None)]
+
     if filter_param.status is not None:
-        filters.append(Brand.status == filter_param.status)
+        filters.append(Category.status == filter_param.status)
     if filter_param.start_date is not None:
-        filters.append(Brand.created_at >= filter_param.start_date)
+        filters.append(Category.created_at >= filter_param.start_date)
     if filter_param.end_date is not None:
-        filters.append(Brand.created_at <= filter_param.end_date)
+        filters.append(Category.created_at <= filter_param.end_date)
+    if filter_param.search is not None:
+        filters.append(
+            or_(
+                Category.name.ilike(f"%{filter_param.search}%"),
+                Category.slug.ilike(f"%{filter_param.search}%")
+            )
+        )
+
+    sort_columns = {
+        "created_at":Category.created_at,
+        "updated_at":Category.updated_at,
+        "name":Category.name
+    }
+
+    column = sort_columns.get(filter_param.sort_by, Category.created_at)
+    order_by = column.desc() if filter_param.sort_order == 'desc' else column.asc()
 
     categories  = await category_repo.paginate(
-        page=page_num,
-        per_page=offset,
+        page=filter_param.page_num,
+        per_page=filter_param.per_page,
         filters=filters,
-        order_by = [Brand.created_at.desc()]
+        order_by = [order_by]
     )
-    total = await category_repo.count(filter=filters)
+    total = await category_repo.count(filters=filters)
 
     return {
         "items":categories,
         "total":total,
-        "page": page_num,
-        "per_page": offset
+        "page": filter_param.page_num,
+        "per_page": (filter_param.page_num - 1) * filter_param.per_page
     }
 
 async def get_category_by_name(db, name:str = None, cat_id= None):
@@ -193,6 +215,17 @@ async def get_category_by_name(db, name:str = None, cat_id= None):
                 Category.id==cat_id
             ]
         )
+
+async def get_product_associated_amount(db, cat_id):
+    product_repo = BaseGeneric(Product, db)
+    return await product_repo.count(filters=[
+        Product.category==cat_id
+    ])
+
+async def update_category(db, data, id):
+    category = await base_update(db, Category, data, filters=[Category.id == id])
+    product_amount = await get_product_associated_amount(db, id)
+    return category, product_amount
 
 
 
