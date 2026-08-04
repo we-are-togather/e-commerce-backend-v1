@@ -1,5 +1,6 @@
 from pathlib import Path
 from typing import Annotated, List
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -7,11 +8,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.outh2 import get_current_user, require_role
 from app.db.base import get_db
 from app.schemas.admin import ListByFilter
-from app.schemas.base import BaseResponse
+from app.schemas.base import BaseResponse, Meta
 from app.schemas.product import ProductCreateResponseSchema, ProductCreateSchema, ProductFilter
 from app.schemas.user import User
 from app.services.admin import product_service
 from app.utils.logger import logging
+from app.core.context import get_request_id
 
 router = APIRouter()
 UPLOAD_DIR = Path("uploads/products")
@@ -31,7 +33,8 @@ async def get_product(id:int, db: Annotated[AsyncSession, Depends(get_db)], user
     return await product_service.get_product(db, id)
 
 @router.delete("/product/{id}")
-async def remove_product(id, db: Annotated[AsyncSession, Depends(get_db)], user: Annotated[User, Depends(get_current_user)], role: Annotated[User, Depends(require_role("admin"))]):
-    if product_service.product_delete(db, id):
-        return BaseResponse(status="200", msg="product deleted successfully", lang="eng", data=[])
+async def remove_product(id:int, db: Annotated[AsyncSession, Depends(get_db)], user: Annotated[User, Depends(get_current_user)], role: Annotated[User, Depends(require_role("admin"))]):
+    if await product_service.product_delete(db, id):
+        return BaseResponse(status=status.HTTP_200_OK,success=True, message="product deleted successfully", lang="eng", data=[], meta=Meta(request_id=get_request_id(),
+                    timestamp=datetime.now(tz=timezone.utc)))
     raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Product is not available with the id {id}")

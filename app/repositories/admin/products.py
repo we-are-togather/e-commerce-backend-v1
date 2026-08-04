@@ -94,7 +94,15 @@ async def get_product(db, product_id):
                                              selectinload(Product.seo_keywords)
                                         ])
 
-async def product_delete(db, product_id):
-    repo = BaseGeneric(Product, db); product = await repo.first(filters=[Product.id == product_id])
-    if product: await repo.delete(product); await db.commit(); return True
-    return False
+async def product_delete(db, product_id: int) -> bool:
+    repo = BaseGeneric(Product, db)
+
+    product = await repo.first(filters=[Product.id == product_id])
+
+    if product is None:
+        return False
+
+    await repo.delete(product)
+    await db.commit()
+
+    return True
