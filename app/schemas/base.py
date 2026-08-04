@@ -7,6 +7,7 @@ from typing import Any, Generic, List, Optional, TypeVar, Dict
 
 
 from pydantic.generics import GenericModel
+from app.enums.base_enums import WarningCode
 
 T = TypeVar("T")
 
@@ -25,6 +26,10 @@ class SortMeta(BaseModel):
     field: Optional[str] = None
     direction: Optional[str] = None
 
+class WarningMessage(BaseModel):
+    code: WarningCode
+    message: str
+    details: dict[str, Any] = Field(default_factory=dict)
 
 class Meta(BaseModel):
     request_id: Optional[str] = None
@@ -45,6 +50,7 @@ class BaseResponse(GenericModel, Generic[T]):
     message: str = Field(description='message of the status')
     lang: str = Field(description='language which you are return')
     data:List[Optional[Dict]]
+    warnings:WarningMessage|None = None
     meta:Meta
 
 

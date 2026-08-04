@@ -7,7 +7,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from slugify import slugify
 
-from app.repositories import admin_repositores 
+from app.repositories import admin as admin_repositores
 from app.core.config import UPLOAD_DIR
 
 from app.schemas.admin import (

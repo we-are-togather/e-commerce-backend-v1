@@ -2,6 +2,7 @@ from pydantic import BaseModel, Field
 from typing import Any, List, Optional, Dict
 from app.schemas.base import BaseResponse
 from datetime import datetime
+from decimal import Decimal
 
 from app.schemas.product import (
     Category,
@@ -35,15 +36,20 @@ class ImageUploadResponseSchema(BaseResponse):
 #               Brand
 # ========================================
 class BrandSchema(BaseModel):
-    brand_id:Optional[int] = None
-    brand_name:str
+    id:Optional[int] = None
+    name:str
     description:str
     website_url:str
     status:Status
     logo_url: Optional[str] = None
-    is_active:Optional[bool] = None
+    slug:Optional[str] = None
+    product_associated:Optional[int] = None
 
-
+class BrandUpdateSchema(BaseModel):
+    name: str | None = None
+    description: str | None = None
+    website_url:str|None = None
+    status: Status | None = None
 
 
 class BrandResponseSchema(BaseResponse):
@@ -85,6 +91,7 @@ class CategoryFilter(BaseModel):
     sort_by: str = "created_at"
     sort_order: str = "desc"
 
+
 class CategoryResponseSchema(BaseResponse):
     data: CategorySchema
 
@@ -105,13 +112,13 @@ class ListByFilter(BaseModel):
     max_price:Optional[str] = None
 
 class ProductResponse(BaseModel):
-    product_id: int
+    id: int
     name: str
     status:str
     category:str
-    min_price:str
-    max_price:str
-    quantitiy:str
+    min_price:Decimal
+    max_price:Decimal
+    quantitiy:int
     product_code:str
     brand:str
     model:str
@@ -141,7 +148,7 @@ class AdminProductResponse(BaseModel):
     vides:Optional[List[Video]] = []
     tags:Optional[List[str]] = []
     badges:Optional[List[str]] = []
-    seo:Optional[List[SEO]] = []
+    seo:Optional[SEO] = None
     seo_keywords:Optional[List[str]] = []
     search_keywords:Optional[List[str]] = []
 

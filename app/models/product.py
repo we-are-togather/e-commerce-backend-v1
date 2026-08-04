@@ -28,31 +28,6 @@ from app.enums.base_enums import (
 
 # =========================
 
-# class Attribute(Base):
-#     '''
-#     Product attributes like Color, Size, etc.
-#     '''
-#     __tablename__ = "attributes"
-
-#     id = Column(Integer, primary_key=True)
-#     name = Column(String, unique=True)
-#     value = relationship("AttributeValue", back_populates="attribute")
-
-# class AttributeValue(Base):
-#     '''
-#     Values for attributes, e.g. Red, Blue for Color; S, M, L for Size. Memory 8GB, 16GB for RAM. Processor i5, i7 for Processor.'''
-#     __tablename__ = "attribute_values"
-
-#     id = Column(Integer, primary_key=True)
-
-#     attribute_id = Column(
-#         Integer,
-#         ForeignKey("attributes.id")
-#     )
-
-#     value = Column(String)
-#     attribute = relationship("Attribute", back_populates="value")
-
 class Attribute(BaseModel):
     __tablename__ = "variant_attributes"
     key = Column(String)

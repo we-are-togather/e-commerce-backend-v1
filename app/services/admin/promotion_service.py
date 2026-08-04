@@ -8,7 +8,7 @@ from shutil import copyfileobj
 from pathlib import Path
 from slugify import slugify
 
-from app.repositories import admin_repositores 
+from app.repositories import admin as admin_repositores
 
 from app.schemas.promotions import (
     PromotionListResponse,

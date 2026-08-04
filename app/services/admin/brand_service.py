@@ -20,9 +20,9 @@ from app.schemas.base import *
 from app.utils.logger import logging
 from app.core.context import get_request_id
 
-from app.repositories import admin_repositores 
+from app.repositories import admin as admin_repositores
 from app.core.config import UPLOAD_DIR
-from app.utils.helper.file_helper import save_image
+from app.utils.helper.file_helper import save_image, create_path, remove_file
 from app.enums.image_enums import ImageType
 
 
@@ -71,6 +71,33 @@ async def remove_brand(db, brand_id:int) -> bool:
     logging.info(f"Removed brand admin service of id: {brand_id}")
     return is_deleted
 
+async def get_brand(db, brand_id):
+    brand = await admin_repositores.get_brand(db, brand_id=brand_id)
+    if brand is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Brand not found for: {brand_id}")
+    number_of_product = await admin_repositores.get_product_associated_amount(db, brand_id=brand_id)
+    return BrandResponseSchema(
+        status=status.HTTP_200_OK,
+        message=f"Brand for {brand.name}",
+        success=True,
+        lang='en',
+        data=BrandSchema(
+            id=brand.id,
+            name=brand.name,
+            description=brand.description,
+            status=brand.status,
+            logo_url=brand.logo_url,
+            slug=brand.slug,
+            website_url=brand.website_url,
+            product_associated=number_of_product
+        ),
+        meta = Meta(
+            request_id=get_request_id(),
+            timestamp=datetime.now(tz=timezone.utc)
+        )
+        
+    )
+
 
 async def list_brand(db, page_num, show_per_page, filter_param):
     filter_param = BrandFilter.model_validate_json(filter_param)
@@ -80,7 +107,7 @@ async def list_brand(db, page_num, show_per_page, filter_param):
     brands = [
         BrandSchema(
             brand_id = brand.id,
-            brand_name=brand.name,
+            name=brand.name,
             description=brand.description,
             website_url=brand.website_url,
             status=brand.status,
@@ -114,4 +141,65 @@ async def list_brand(db, page_num, show_per_page, filter_param):
             filters=filter_param.model_dump(exclude_none=True)
         )
     )
-    
+
+async def update_brand(db, payload, brand_id):
+    data = dict()
+    if payload.name is not None:
+        data['name'] = payload.name
+        data['slug'] = slugify(payload.name)
+    if payload.description is not None:
+        data['description'] = payload.description
+    if payload.website_url is not None:
+        data['website_url']
+    if payload.status is not None:
+        data['status'] = payload.status
+    brand = await admin_repositores.update_brand(db, data, brand_id)
+    product_associated = await admin_repositores.get_product_associated_amount(db, brand_id=brand_id)
+
+    if brand:
+        return BrandResponseSchema(
+                status=status.HTTP_200_OK,
+                message=f"Brand for {brand.name}",
+                success=True,
+                lang='en',
+                data=BrandSchema(
+                    id=brand.id,
+                    name=brand.name,
+                    description=brand.description,
+                    status=brand.status,
+                    logo_url=brand.logo_url,
+                    slug=brand.slug,
+                    website_url=brand.website_url,
+                    product_associated=product_associated
+                ),
+                meta=Meta(
+                    request_id=get_request_id(),
+                    timestamp=datetime.now(tz=timezone.utc)
+                )
+                
+            )
+    else:
+        raise HTTPException(status_code=status.HTTP_304_NOT_MODIFIED, detail=f"Brand {brand_id} is not updated. Try again later")
+
+async def update_logo(db, brand_id, logo):
+    file_path = await create_path(logo.filename, ImageType.BRAND)
+    brand = await admin_repositores.get_brand(db, brand_id=brand_id)
+    if brand is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Brand not found for {brand_id}")
+    await save_image(file_path, logo, ImageType.BRAND)
+    if not await remove_file(brand.logo_url):
+        await remove_file(file_path)
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Logo image not found for {brand.name}")
+    brand = await admin_repositores.update_brand(db, {"logo_url":str(file_path)}, brand_id)
+
+    return BaseResponse(
+        status=status.HTTP_200_OK,
+        message="Logo Updated successfully.",
+        success=True,
+        lang='en',
+        data = [],
+        meta=Meta(
+            request_id=get_request_id(),
+            timestamp=datetime.now(tz=timezone.utc)
+        )
+    )

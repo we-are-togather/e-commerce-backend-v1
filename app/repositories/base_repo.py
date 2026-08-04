@@ -313,10 +313,11 @@ async def base_bulk_update_many(db, model, items: list[dict], id_field="id"):
     await db.commit()
     return updated
 
-async def add_data(db, model, data):
+async def add_data(db, model, data, is_commit=True):
     repo = BaseGeneric(model, db)
-    output = repo.create(**data)
-    await db.commit()   
+    output = await repo.create(**data)
+    if is_commit:
+        await db.commit()   
     return output
 
 async def get_data_by_filter(db, model,is_first=True, **kwargs):
@@ -327,6 +328,6 @@ async def get_data_by_filter(db, model,is_first=True, **kwargs):
         )
 
     total = await repo.count(filters=kwargs["filters"])
-    return repo.all(
+    return await repo.all(
             **kwargs
         ), total

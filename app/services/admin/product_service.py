@@ -1,5 +1,7 @@
 from fastapi import HTTPException, status, File, UploadFile
 from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.exc import SQLAlchemyError
 
 import os
 from math import ceil
@@ -9,7 +11,7 @@ from shutil import copyfileobj
 from pathlib import Path
 from slugify import slugify
 
-from app.repositories import admin_repositores 
+from app.repositories import admin as admin_repositores
 from app.core.config import UPLOAD_DIR
 
 from app.schemas.admin import (
@@ -50,7 +52,8 @@ from app.schemas.base import *
 
 from app.utils.logger import logging
 from app.core.context import get_request_id
-from app.utils.helper.file_helper import save_image
+from app.utils.helper.file_helper import save_image, file_check, remove_file
+from app.utils.helper.product_helper import ProductCodeGenerator
 from app.enums.image_enums import ImageType
 
 async def add_variants(db,product, variants):
@@ -174,15 +177,41 @@ async def add_seo_keyword(db, product, meta_keywords):
         }
         seo_keyword = await admin_repositores.add_seo_keyword(db, seo_keyword)
 
+async def add_related_products(db, product, related_prodcuts):
+    missing_ids = []
+    for prod_id in related_prodcuts:
+        product = admin_repositores.get_product(db, prod_id)
+        if product:
+            data = {
+                "product_id": product.id,
+                "related_product_id": prod_id
+            }
+            await admin_repositores.add_related_product(db, data)
+        missing_ids.append(prod_id)
+    if len(missing_ids) > 0:
+        return WarningMessage(
+                code=WarningCode.RELATED_PRODUCT_NOT_FOUND,
+                message="Some related Product were skipped",
+                details={
+                "missing_ids": missing_ids,
+                "processed": len(related_prodcuts) - len(missing_ids),
+                "skipped": len(missing_ids)
+            }
+        )
+    return None
+        
     
 
-async def add_product(db, payload, files):
-    category = await admin_repositores.get_category_by_name(db, payload.category.name)
+async def add_product(db: AsyncSession, payload:ProductCreateSchema, files):
+    print("Before begin:", db.in_transaction())
+    file_check(files, payload.image_groups) # checking images with product images
+    
+    category = await admin_repositores.get_category_by_name(db, cat_id=payload.category)
     if not category:
-        raise HTTPException(status_code=400, detail=f"Category '{payload.category.name}' does not exist. Please create the category first.")
-    brand = await admin_repositores.get_brand_name(db, payload.brand)
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Category '{payload.category}' does not exist. Please create the category first.")
+    brand = await admin_repositores.get_brand(db, brand_id=payload.brand)
     if not brand:
-        raise HTTPException(status_code=400, detail=f"Brand '{payload.brand}' does not exist. Please create the brand first.")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Brand '{payload.brand}' does not exist. Please create the brand first.")
 
     product_data = {
         "name": payload.name,
@@ -195,20 +224,14 @@ async def add_product(db, payload, files):
 
         "slug": slugify(payload.name),
         "quantity": payload.quantity,
-        "product_code": payload.product_code,
-        "brand": brand.id,
+        "product_code": ProductCodeGenerator.generate(),
+        "brand_id": brand.id,
         "model": payload.model,
         "category": category.id,
         "short_description": payload.short_description,
     }
     product = await admin_repositores.add_product(db, product_data)
     await add_variants(db, product, payload.variants)
-
-    product_path = Path.joinpath(UPLOAD_DIR, str(product.id))
-    os.makedirs(product_path, exist_ok=True)
-    for file in files:
-        file_path = Path.joinpath(product_path, slugify(file.filename))
-        await save_image(file_path, file, ImageType.PRODUCT)
 
     await add_images(db, product, payload.image_groups)
     await add_videos(db, product, payload.video)
@@ -218,6 +241,20 @@ async def add_product(db, payload, files):
     await add_badges(db, product, payload.badges)
     await add_seo(db, product, payload.seo)
     await add_seo_keyword(db, product, payload.seo.meta_keywords)
+    warn = await add_related_products(db, product, payload.related_products)
+
+
+    saved_files = []
+    try:
+        product_path = Path.joinpath(UPLOAD_DIR, str(product.id))
+        os.makedirs(product_path, exist_ok=True)
+        for file in files:
+            file_path = Path.joinpath(product_path, slugify(file.filename))
+            await save_image(file_path, file, ImageType.PRODUCT, is_validate=False)
+            saved_files.append(file_path)
+    except:
+        for file in saved_files:
+            remove_file(file)
 
 
     return ProductCreateResponseSchema(
@@ -232,33 +269,34 @@ async def add_product(db, payload, files):
         meta = Meta(
             request_id=get_request_id(),
             timestamp=datetime.now(tz=timezone.utc)
-        )
+        ),
+        warnings=warn
         
     )
 
 
-async def get_list_product(db,filter_param, show_per_page, page_num):
-    offset = (page_num - 1) * show_per_page
+async def get_list_product(db,filters):
+    # offset = (page_num - 1) * show_per_page
 
-    products, total_produtcts = await admin_repositores.get_list_product(db,filter_param, offset, show_per_page)
+    products = await admin_repositores.get_list_product(db,filters)
     
     response_product = []
-    for product in products:
+    for product in products["items"]:
         response_product.append(
             ProductResponse(
                 id=product.id,
                 name=product.name,
                 status=product.status,
-                category=product.category,
+                category=product.cat.name,
                 min_price=product.min_price,
                 max_price=product.max_price,
-                quantitiy=product.quantitiy,
+                quantitiy=product.quantity,
                 product_code=product.product_code,
-                brand=product.brand,
+                brand=product.brand_table.name,
                 model=product.model
             )
         )
-    total_pages = ceil(total_produtcts / show_per_page)
+    total_pages = ceil(products["total"] / filters.per_page)
     return ProductListResponseSchema(
         status=status.HTTP_200_OK,
         message='Product List',
@@ -266,38 +304,38 @@ async def get_list_product(db,filter_param, show_per_page, page_num):
         lang='en',
         data=ProductListItemSchema(
             total = len(response_product),
-            page=page_num,
-            limit=show_per_page,
+            page=filters.page_num,
+            limit=filters.per_page,
             products=response_product
         ),
         meta = Meta(
             request_id=get_request_id(),
             timestamp=datetime.now(tz=timezone.utc),
             pagination=PaginationMeta(
-                page=page_num,
-                per_page=show_per_page,
-                total_items=total_produtcts,
+                page=filters.page_num,
+                per_page=filters.per_page,
+                total_items=products["total"],
                 total_pages=total_pages,
-                has_next= True if total_pages > page_num else False,
-                has_previous= True if (total_pages >= page_num) and (page_num > 1) else False
+                has_next= True if total_pages > filters.page_num else False,
+                has_previous= True if (total_pages >= filters.page_num) and (filters.page_num > 1) else False
             ),
             sort = SortMeta(
                     field='created_at',
                     direction='desc'
             ),
-            filters=filter_param
+            filters=filters.model_dump(exclude_none=True)
         )
     )
 
 
 async def get_product_tags(db, product_id):
-    tags = await admin_repositores.get_product_tags(db, product_id)
+    tags, _ = await admin_repositores.get_product_tags(db, product_id)
     return [
         tag.name  for tag in  tags
     ]
 
 async def get_product_badges(db, product_id):
-    badges = await admin_repositores.get_product_badges(db, product_id)
+    badges, _ = await admin_repositores.get_product_badges(db, product_id)
     return [
         badge.name for badge in badges
     ]
@@ -307,16 +345,16 @@ async def get_product(db, product_id):
     category = Category(
         name=product.cat.name,
         description=product.cat.description,
-        is_active=product.cat.is_active,
-        parent=admin_repositores.get_category_by_name(db, cat_id=product.cat.parent_id) if product.cat.parent_id else None,
+        status=product.cat.status,
+        parent=await admin_repositores.get_category_by_name(db, cat_id=product.cat.parent_id) if product.cat.parent_id else None,
         logo_url=product.cat.logo_url 
 
     )
     brand = BrandSchema(
-        brand_name=product.brand_table.name,
+        name=product.brand_table.name,
         logo_url = product.brand_table.logo_url,
         description = product.brand_table.description,
-        is_active = product.brand_table.is_active,
+        status = product.brand_table.status,
         website_url = product.brand_table.website_url
     )
     specification_data = []
@@ -390,7 +428,7 @@ async def get_product(db, product_id):
 
     variants = [
         Variant(
-            name=variant.color_name,
+            name=variant.name,
             price=variant.price,
             compare_at_price=variant.compare_at_price,
             inventory = variant.inventory,
@@ -413,17 +451,15 @@ async def get_product(db, product_id):
 
     # seo
 
-    product_seos = [
-        SEO(
-            meta_title=seo.meta_title,
-            canonical_url = seo.canonical_url,
-            # meta_keywords = seo.meta_keywords,
-            meta_description=seo.meta_description,
-            open_graph_image=seo.og_image,
-            index=seo.no_index
+    product_seos = SEO(
+            meta_title=product.seo.meta_title,
+            canonical_url = product.seo.canonical_url,
+            # meta_keywords = product.seo.meta_keywords,
+            meta_description=product.seo.meta_description,
+            open_graph_image=product.seo.og_image,
+            index=product.seo.no_index
         ) 
-        for seo in product.seo
-    ]
+        
 
     # seo keyword
     seo_keywords =  [

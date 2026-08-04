@@ -1,17 +1,51 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import Any, List, Optional, Dict
+from decimal import Decimal
 
 from app.schemas.base import BaseResponse
 from datetime import datetime
+from app.enums.base_enums import Status
+
+
+
+# ===========================================
+#     Product Filter schema
+# ===========================================
+class ProductFilter(BaseModel):
+    page_num: int = Field(default=1, ge=1)
+    per_page: int = Field(default=20, ge=1, le=100)
+    search: str | None = None
+    # status:Optional[Status] = None
+    status:str|None = None
+    start_date:Optional[datetime] = None
+    end_date:Optional[datetime] = None
+    sort_by: str = "created_at"
+    sort_order: str = "desc"
+
+    category:int|None = None
+    brand:int|None=None
+
+    # Price
+    min_price: Decimal | None = None
+    max_price: Decimal | None = None
+
+    # Stock
+    min_quantity: int | None = None
+    max_quantity: int | None = None
+    in_stock: bool | None = None
+
+    # Product type
+    # has_variants: bool | None = None
+
+    # Featured / Visibility
+    # featured: bool | None = None
+    # published: bool | None = None
 
 
 
 # ============================================
 # product Specification Schemas
 # ============================================
-
-
-
 class SpecificationSchema(BaseModel):
     label: str
     value: str
@@ -36,9 +70,9 @@ class Publishing(BaseModel):
 class SEO(BaseModel):
     meta_title: str
     meta_description: str
-    meta_keywords:str
-    canonical_url:List[str]
-    open_graph_image:List[str]
+    meta_keywords:Optional[str] = None
+    canonical_url:str
+    open_graph_image:str
     index:bool
 
 
@@ -94,7 +128,7 @@ class Organization(BaseModel):
 class Category(BaseModel):
     name:str
     description:str
-    is_active:bool
+    status:Status
     parent:Optional[str] = None
     logo_url:Optional[str] = None
 
@@ -102,13 +136,13 @@ class Category(BaseModel):
 class ProductCreateSchema(BaseModel):
     name: str
     status: str
-    price: float
-    compare_at_price: float
-    quantity: int
-    product_code: str
-    brand: str
+    price: Optional[float] = None
+    compare_at_price: Optional[float] = None
+    quantity: Optional[int] = None
+    product_code: Optional[str]  = None
+    brand: int
     model: str
-    category: Category
+    category: int
     short_description: str
     description: List[DescriptionSchema]
     specifications: List[SpecificationGroup]
@@ -130,7 +164,6 @@ class ProductCreateSchema(BaseModel):
     thumbnail: str
     image_groups: List[ImageGroup]
 
-    related_product_ids: List[int]
 
 
 

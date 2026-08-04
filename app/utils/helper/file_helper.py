@@ -2,16 +2,21 @@ import asyncio
 from pathlib import Path
 from io import BytesIO
 from PIL import Image
+from typing import List
 
 from fastapi import HTTPException, status
 
 from app.models.product import Category
-from app.repositories.admin_repositores import get_category_by_name
+from app.repositories.admin.categories import get_category_by_name
 from app.core.config import UPLOAD_DIR
 import aiofiles
 from fastapi import UploadFile
 from app.utils.helper.data_class import ImageValidationConfig
 from app.utils.helper.file_config import IMAGE_CONFIGS
+
+from app.schemas.product import ImageGroup
+from app.enums.image_enums import ImageType
+
 async def validate_image(
         file:UploadFile,
         config:ImageValidationConfig
@@ -88,8 +93,9 @@ async def validate_image(
     file.file.seek(0)
 
     
-async def save_image(file_path: str, file: UploadFile,folder_type:str, chunk_size: int = 1024 * 1024):
-    validate_image(file, IMAGE_CONFIGS[folder_type])
+async def save_image(file_path: str, file: UploadFile,folder_type:str, chunk_size: int = 1024 * 1024, is_validate=True):
+    if is_validate:
+        validate_image(file, IMAGE_CONFIGS[folder_type])
     
     async with aiofiles.open(file_path, "wb") as f:
         while chunk := await file.read(chunk_size):
@@ -110,4 +116,19 @@ async def remove_file(file_path):
     await asyncio.to_thread(path.unlink)
     return True
 
+async def file_check(files: list[UploadFile], image_groups: list[ImageGroup]):
+    image_names = {
+        image.image_name
+        for group in image_groups
+        for image in group.images
+        if image.image_name is not None
+    }
 
+    for file in files:
+        if file.filename not in image_names:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=f"Image '{Path(file.filename).name}' does not match any product image."
+            )
+
+        validate_image(file, config=[ImageType.PRODUCT])
