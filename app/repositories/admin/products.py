@@ -1,7 +1,7 @@
 from sqlalchemy.orm import selectinload, joinedload
 from sqlalchemy import or_
-from app.models.product import Attribute, Badge, Description, Image, ImageGroup, Product, ProductBadge, ProductSEO, ProductTag, ProductVariant, Question, Review, SEOKeyword, SpecificationType, SpecificationValue, Tag, ProductVideos
-from app.repositories.base_repo import BaseGeneric, add_data, get_data_by_filter
+from app.models.product import Attribute, Badge, Description, Image, ImageGroup, Product, ProductBadge, ProductSEO, ProductTag, ProductVariant, Question, Review, SEOKeyword, SpecificationType, SpecificationValue, Tag, ProductVideos, RelatedProduct
+from app.repositories.base_repo import BaseGeneric, add_data, get_data_by_filter, base_update, base_bulk_update_many, base_delete
 from app.schemas.product import ProductFilter
 async def get_product_associated_amount(db, cat_id=None, brand_id=None):
     filters = []
@@ -106,3 +106,46 @@ async def product_delete(db, product_id: int) -> bool:
     await db.commit()
 
     return True
+
+
+# ====================================
+#               Update
+# ====================================
+async def update_product(db, data, prod_id): await base_update(db, Product, data, filters=[Product.id == prod_id])
+async def update_specification(db,data, spec_id=None):
+    if isinstance(data, list):await  base_bulk_update_many(db, SpecificationType, data)
+    else: await base_update(db, SpecificationType, data, filters=[SpecificationType.id==spec_id])
+
+async def update_specification_value(db, data):await base_bulk_update_many(db, SpecificationValue, data)
+async def update_descriptions(db, data, desc_id=None):
+    if isinstance(data, list): await base_bulk_update_many(db, Description, data)
+    else: await base_update(db, Description, data, filters=[Description.id == desc_id])
+
+async def update_image_group(db, data): await base_bulk_update_many(db, ImageGroup, data)
+async def update_video(db, data): await base_bulk_update_many(db, ProductVideos, data)
+async def update_related_products(db, data): await base_bulk_update_many(db, RelatedProduct, data)
+async def update_seo(db, data): await base_bulk_update_many(db, ProductSEO, data)
+async def update_seo_keywords(db, data): await base_bulk_update_many(db, SEOKeyword, data)
+async def update_update_variants(db, data): await base_bulk_update_many(db, ProductVariant, data)
+async def updated_product_tag(db, data): await base_bulk_update_many(db, ProductTag, data)
+async def update_badges(db, data): await base_bulk_update_many(db, ProductBadge, data)
+
+
+# ====================================
+#               Get 
+# ====================================
+async def get_description(db, desc_id):  desc_repo = BaseGeneric(Description, db) ; return await desc_repo.get_by_id(desc_id)
+async def get_description_list(db, product_id): return await get_data_by_filter(db, Description, is_first=False, filters=[Description.product_id == product_id])
+
+async def get_specification(db, spec_id): return await get_data_by_filter(db, SpecificationType, filters=[SpecificationType.id == spec_id], options=[selectinload(SpecificationType.specification_values)])
+async def get_specifications(db, product_id): return await get_data_by_filter(db, SpecificationType, is_first=False, filters=[SpecificationType.product_id==product_id], options=[selectinload(SpecificationType.specification_values)])
+
+
+
+
+# =======================================================
+#                   Delete
+# =======================================================
+async def delete_description(db, desc_id): await base_delete(db, Description, filters=[Description.id==desc_id])
+async def delete_specification(db, spec_id): await base_delete(db, SpecificationType, filters=[SpecificationType.id==spec_id])
+

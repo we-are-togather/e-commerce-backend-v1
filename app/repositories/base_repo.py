@@ -331,3 +331,11 @@ async def get_data_by_filter(db, model,is_first=True, **kwargs):
     return await repo.all(
             **kwargs
         ), total
+
+async def base_delete(db, model, filters):
+    repo = BaseGeneric(model, db)
+    obj = await repo.first(filters=filters)
+    if obj is None:
+        return False
+    await repo.delete(obj)
+    return True

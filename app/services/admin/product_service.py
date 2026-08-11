@@ -40,6 +40,10 @@ from app.schemas.product import (
     QuestionSchema,
     ReviewsSchema,
     SEO,
+    RelatedProduct,
+    TagSchema,
+    BadgeSchema,
+    Publishing
 )
 
 from app.schemas.product import (ProductCreateSchema, 
@@ -88,8 +92,8 @@ async def add_images(db, product, image_groups):
         group = await admin_repositores.add_image_group(db, group)
         for image in image_group.images:
             image = {
+                    "group_id": group.id,
                     "image_url": Path("uploads/products").joinpath(str(product.id),slugify(image.image_name)).as_posix(),
-
                     "alt_text": image.alt_text
                 }
             image = await admin_repositores.add_image(db, image)
@@ -104,19 +108,147 @@ async def add_videos(db, product, videos):
         }
         video = await admin_repositores.add_videos(db, video)
 
-async def add_description(db, product, descriptions):
-    for desc in descriptions:
-        description = {
-            "product_id": product.id,
-            "title": desc.title,
-            "text": desc.text
-        }
-        description = await admin_repositores.add_description(db, description)
+# ====================================
+#               Description
+# ====================================
 
-async def add_specification(db, product, specifications):
-    for spec in specifications:
+async def add_description(db, product_id, descriptions):
+    if isinstance(description, list):
+        for desc in descriptions:
+            description = {
+                "product_id": product_id,
+                "title": desc.title,
+                "text": desc.text
+            }
+            await admin_repositores.add_description(db, description)
+    else: 
+        description = {
+            "product_id":product_id,
+            "title":descriptions.title,
+            "text":descriptions.text
+        }
+        await admin_repositores.add_description(db, description)
+        return BaseResponse(
+            status=status.HTTP_201_CREATED,
+            success=True,
+            message=f"Description Created successfully of product: {product_id}",
+            lang='en',
+            data=[],
+            meta=Meta(
+                    request_id=get_request_id(),
+                    timestamp=datetime.now(tz=timezone.utc)
+                )
+            )
+    
+async def get_description(db, desc_id):
+    desc = await admin_repositores.get_description(db, desc_id)
+    if desc is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"description id: {desc_id} is not found")
+    return BaseResponse(
+        status=status.HTTP_201_CREATED,
+        success=True,
+        message=f"Description Created successfully",
+        lang='en',
+        data = DescriptionSchema(
+            id=desc_id,
+            title=desc.title,
+            text=desc.text
+        ),
+        meta=Meta(
+                request_id=get_request_id(),
+                timestamp=datetime.now(tz=timezone.utc)
+            )
+        )
+
+async def get_description_list(db, product_id):
+    descs, _ = await admin_repositores.get_description_list(db, product_id)
+    output = [
+        DescriptionSchema(
+            id=desc.id,
+            title=desc.title,
+            text=desc.text
+        ) for desc in descs
+    ]
+
+    return BaseResponse(
+        status=status.HTTP_200_OK,
+        success=True,
+        message=f"Descriptions of product: {product_id}",
+        lang='en',
+        data = output,
+        meta=Meta(
+                request_id=get_request_id(),
+                timestamp=datetime.now(tz=timezone.utc)
+            )
+        )
+
+async def delete_description(db, desc_id):
+    is_deleted = await admin_repositores.delete_description(db, desc_id)
+    if is_deleted:
+        return BaseResponse(
+        status=status.HTTP_200_OK,
+        success=True,
+        message=f"Description Deleted successfully.",
+        lang='en',
+        data =[],
+        meta=Meta(
+                request_id=get_request_id(),
+                timestamp=datetime.now(tz=timezone.utc)
+            )
+        )
+    else: raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Can not deleted desc:{desc_id}. May be its not existed")
+
+async def update_description(db, descs, desc_id=None):
+    if isinstance(descs, list):
+        output = []
+        for desc in descs:
+            data = dict()
+            data['id'] = desc.id
+            if desc.title is not None: data['title'] = desc.title
+            if desc.text is not None:data['text'] = desc.text
+            output.append(data)
+        await admin_repositores.update_descriptions(db, output)
+    else: 
+        data = {}
+        if desc.title is not None: data['title'] = desc.title
+        if desc.text is not None:data['text'] = desc.text
+        await admin_repositores.update_descriptions(db, data, desc_id=desc_id)
+        return BaseResponse(
+            status=status.HTTP_200_OK,
+            success=True,
+            message=f"Description Updated successfully of description id: {desc_id}",
+            lang='en',
+            data = [],
+            meta=Meta(
+                    request_id=get_request_id(),
+                    timestamp=datetime.now(tz=timezone.utc)
+                )
+            )
+
+    
+# =======================================================
+#                   Specification
+# =======================================================
+
+async def add_specification(db, product_id, specifications):
+    if isinstance(specifications, list):
+        for spec in specifications:
+            specification = {
+                "product_id": product_id,
+                "type": spec.group_name
+            }
+            specification = await admin_repositores.add_specification_type(db, specification)
+            for spec_value in spec.specification_value:
+                spec_value_entry = {
+                    "specification_type_id": specification.id,
+                    "key": spec_value.label,
+                    "value": spec_value.value,
+                    # 'unit': spec_value.unit
+                }
+                spec_value_entry = await admin_repositores.add_specification_value(db, spec_value_entry)
+    else:
         specification = {
-            "product_id": product.id,
+            "product_id": product_id,
             "type": spec.group_name
         }
         specification = await admin_repositores.add_specification_type(db, specification)
@@ -128,6 +260,97 @@ async def add_specification(db, product, specifications):
                 # 'unit': spec_value.unit
             }
             spec_value_entry = await admin_repositores.add_specification_value(db, spec_value_entry)
+        return BaseResponse(
+            status=status.HTTP_201_CREATED,
+            success=True,
+            message=f"Specification Created successfully of product: {product_id}",
+            lang='en',
+            data=[],
+            meta=Meta(
+                    request_id=get_request_id(),
+                    timestamp=datetime.now(tz=timezone.utc)
+                )
+            )
+
+
+async def get_specification(db, spec_id):
+    specification = await admin_repositores.get_specification(db, spec_id)
+    if specification is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Specification Not found wiht the id {spec_id}")
+    spec = SpecificationGroup(
+                group_name=specification.type,
+                specification_value= [
+                    SpecificationSchema(
+                        label=spec_value.key,
+                        value=spec_value.value,
+                        # unit=spec_value.unit
+                    ) for spec_value in specification.specification_values
+                ]
+            )
+    return BaseResponse(
+            status=status.HTTP_200_OK,
+            success=True,
+            message=f"Specification of spec if: {spec_id}",
+            lang='en',
+            data=spec,
+            meta=Meta(
+                    request_id=get_request_id(),
+                    timestamp=datetime.now(tz=timezone.utc)
+                )
+        )
+
+async def get_specification_list(db, product_id):
+    specifications, _ = admin_repositores.get_specifications(db, product_id)
+    specification_data = []
+    for spec in specifications:
+        specification_data.append(
+            SpecificationGroup(
+            group_name=spec.type,
+            specification_value= [
+                SpecificationSchema(
+                    label=spec_value.key,
+                    value=spec_value.value,
+                    # unit=spec_value.unit
+                    ) for spec_value in spec.specification_values
+                ]
+            )
+        )
+    return BaseResponse(
+        status=status.HTTP_200_OK,
+        success=True,
+        message=f"Specification of product: {product_id}",
+        lang='en',
+        data=specification_data,
+        meta=Meta(
+                request_id=get_request_id(),
+                timestamp=datetime.now(tz=timezone.utc)
+            )
+        )
+
+async def delete_specification(db, spec_id):
+    is_deleted = await admin_repositores.delete_specification(db, spec_id)
+    if is_deleted:
+        BaseResponse(
+            status=status.HTTP_200_OK,
+            success=True,
+            message=f"Specification id:{spec_id} deleted successfully",
+            lang='en',
+            data=[],
+            meta=Meta(
+                    request_id=get_request_id(),
+                    timestamp=datetime.now(tz=timezone.utc)
+                )
+            )
+    else:HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Specification with id{spec_id} not found")
+
+# =======================================================
+#                   Variants
+# =======================================================
+
+async def get_variants(db, product_id):
+    variants = await admin_repositores.get_variants(db, product_id)
+    
+
         
 async def add_tag(db, product, tags):
     for tag in tags:
@@ -506,4 +729,193 @@ async def get_product(db, product_id):
 async def product_delete(db, product_id):
     return await admin_repositores.product_delete(db, product_id)
 
+async def update_variants(db, variants:List[Variant]):
+    output = []
+    for var in variants:
+        data = dict()
+        data['id'] = var.id
+        if var.price is not None: data['price'] = var.price
+        if var.compare_at_price is not None: data['compare_at_price'] = var.compare_at_price
+        if var.inventory is not None: data['inventory'] = var.inventory
+        if var.status is not None: data['status'] = var.status
+        if var.sku is not None: data['sku'] = var.sku
+        output.append(data)
+    await admin_repositores.update_variants(db, output)
+    
 
+async def update_tags(db, product_id, tags:List[TagSchema]):
+    """
+    first check if tag is existed 
+     -   if existed then add the id
+     -   if not exited then create add 
+    """
+    output = []
+    for tag in tags:
+        if tag.name is not None and tag.id is not None:
+            existed_tag = await admin_repositores.get_tag(db, tag.name)
+            if existed_tag is  None : new_tag = await admin_repositores.add_tag(db, {"name": tag.name})
+            else: new_tag = existed_tag
+            data = {"id": tag.id, "product_id": product_id, "tag_id": new_tag.id}
+            output.append(data)
+    await admin_repositores.updated_product_tag(db, output)
+
+async def update_badges(db, product_id, badges:List[BadgeSchema]):
+    """
+        first check if badge is existed 
+         -   if existed then add the id
+         -   if not exited then create add 
+    """
+    output = []
+    for badge in badges:
+        if badge.name  is not None and badge.id is not None:
+            existed_badge = await admin_repositores.get_badge(db, badge.name)
+            if existed_badge is None: new_badge = await admin_repositores.add_badge(db, {"name":badge.name})
+            else: new_badge = existed_badge
+            data = {'id': badge.id, "product_id": product_id, "badge_id": new_badge.id}
+            output.append(data)
+    await admin_repositores.update_badges(db, output)
+
+async def update_publishing(db, publishing:List[Publishing]):
+    output = []
+    for pub in publishing:
+        data = dict()
+        data['id'] = pub.id
+        if pub.search_boost is not None: data['search_boost'] = pub.search_boost
+        if pub.status is not None: data['status'] = pub.status
+        if pub.feature_product is not None: data['feature_product'] = pub.feature_product
+        output.append(data)
+    await admin_repositores.update_publishing(db, output)
+
+async def update_seo(db, seos:List[SEO]):
+    output = []
+    for seo in seos:
+        data = dict()
+        data['id'] = seo.id
+        if seo.meta_title is not None: data['meta_title'] = seo.meta_title
+        if seo.meta_description is not None: data['meta_description'] = seo.meta_description
+        if seo.canonical_url is not None: data['canonical_url'] = seo.canonical_url
+        if seo.open_graph_image is not None: data['og_image'] = seo.open_graph_image
+        if seo.index is not None: data['no_index'] = not seo.index
+        output.append(data)
+    await admin_repositores.update_seo(db, output)
+
+async def update_related_products(db, related_product:List[RelatedProduct]):
+    output = []
+    for prod in related_product:
+        data = {'id': prod.id}
+        if prod.related_product_id is not None:
+            data['related_product_id'] = prod.related_product_id
+        output.append(data)
+    await admin_repositores.update_related_products(db, output)
+
+async def update_video(db, videos:List[Video]):
+    output =[]
+    for video in videos:
+        data= dict()
+        data['id'] = video.id
+        if video.url is not None: data['url'] = video.url
+        if video.title is not None: data['title'] = video.title
+        if video.platform is not None: data['platform'] = video.platform
+        output.append(data)
+    await admin_repositores.update_video(db, output)
+
+
+async def update_image_group(db, image_groups:List[ImageGroup]):
+    output = []
+    for group in image_groups:
+        data = dict()
+        data['id'] = group.id
+        if group.title is not None: data['title'] = group.title
+        if group.group_type is not None: data['group_type'] = group.group_type
+        if group.description is not None: data['description'] = group.description
+        if group.product_id is not None: data['product_id'] = group.product_id
+        if group.variant_id is not None: data['variant_id'] = group.variant_id
+        output.append(data)
+    await admin_repositores.update_image_group(db, output)
+
+
+
+async def update_spec_value(db, spec_values:List[SpecificationSchema]):
+    output = []
+    for spec in spec_values:
+        data = dict()
+        data['id'] = spec.id
+        if spec.label is not None: data['key'] = spec.label
+        if spec.value is not None: data['value'] = spec.value
+        output.append(data)
+    await admin_repositores.update_specification_value(db, output)
+    
+        
+
+async def update_specification(db, specs, spec_id=None):
+    if isinstance(spec, list):
+        output = []
+        for spec in specs:
+            data = dict()
+            if spec.group_name is not None:
+                data['id'] = spec.id
+                data['type'] = spec.group_name
+            output.append(data)
+            if len(spec.specification_value) > 0: await update_spec_value(db, spec.specification_value)
+        await admin_repositores.update_specification(db, output)
+    else:
+        data = {}
+        if specs.group_name is not None:
+            data['id'] = spec_id
+            data['type'] = specs.group_name
+        if len(spec.specification_value) > 0: await update_spec_value(db, spec.specification_value)
+        await admin_repositores.update_specification(db, data)
+        return BaseResponse(
+            status=status.HTTP_200_OK,
+            success=True,
+            message=f"Specification Updated successfully.",
+            lang='en',
+            data=[],
+            meta=Meta(
+                    request_id=get_request_id(),
+                    timestamp=datetime.now(tz=timezone.utc)
+                )
+            )
+        
+async def update_product(db, product_id, payload:ProductCreateSchema):
+    product_update_data = dict()
+    if payload.name is not None: product_update_data['name'] = payload.name
+    if payload.status is not None: product_update_data['status'] = payload.status
+    if payload.brand is not None: 
+        brand = admin_repositores.get_brand(db, brand_id=payload.brand)
+        if brand is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Brand id: {payload.brand} not found in the database.")
+        product_update_data['brand'] = payload.brand
+    
+    if payload.category is not None: 
+        category = admin_repositores.get_category_by_name(db, cat_id=payload.category)
+        if category is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Category id: {payload.category} not found in the database.")
+        product_update_data['category'] = payload.category
+    if payload.model is not None: product_update_data["model"] = payload.model
+    if payload.short_description is not None: product_update_data['short_description'] = payload.short_description
+    if payload.thumbnail is not None: product_update_data['thumbnail_url'] = payload.thumbnail
+
+    product = await admin_repositores.update_product(db, product_update_data, product_id)
+    
+    if len(payload.description) > 0:  await update_description(db, payload.description)
+    if len(payload.specifications) > 0:  await update_specification(db, payload.specifications)
+    if len (payload.variants) > 0:  await update_variants(db, payload.variants)
+    if len(payload.tags) > 0: await update_tags(db, product_id, payload.tags)
+    if len(payload.badges) > 0:  await update_badges(db, product_id, payload.badges)
+    # if len(payload.publishing) > 0: await update_publishing(db, payload.publishing)
+    if len(payload.seo) > 0: await update_seo(db, payload.seo)
+    if len(payload.video) > 0:  await update_video(db, payload.video)
+    if len(payload.image_groups) > 0: await update_image_group(db, payload.image_groups)
+
+    return BaseResponse(
+        status=status.HTTP_200_OK,
+        success=True,
+        message=f"Product updated successfully of product: {product_id}",
+        lang='en',
+        data=[],
+        meta=Meta(
+                request_id=get_request_id(),
+                timestamp=datetime.now(tz=timezone.utc)
+        )
+    )

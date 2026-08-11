@@ -9,7 +9,7 @@ from sqlalchemy import (
     ForeignKey,
     DateTime,
     func,
-    Boolean, DECIMAL
+    Boolean, CheckConstraint, DECIMAL
 )
 from sqlalchemy import Table, Column, Integer, ForeignKey, text
 
@@ -32,7 +32,7 @@ class Attribute(BaseModel):
     __tablename__ = "variant_attributes"
     key = Column(String)
     value = Column(String)
-    variant_id = Column(Integer, ForeignKey("product_variants.id"))
+    variant_id = Column(Integer, ForeignKey("product_variants.id", ondelete="CASCADE"), nullable=False)
     
     variant = relationship("ProductVariant", back_populates='attributes')
 
@@ -66,7 +66,8 @@ class ProductVariant(Base):
 
     product_id = Column(
         Integer,
-        ForeignKey("products.id")
+        ForeignKey("products.id", ondelete="CASCADE"),
+        nullable=False,
     )
     name = Column(String(100))
     price = Column(Float)
@@ -77,25 +78,40 @@ class ProductVariant(Base):
 
     sku = Column(String, unique=True)
     # Relationships
-    product = relationship("Product", back_populates="variants", cascade="all, delete")
-    image_groups = relationship("ImageGroup", back_populates="product_variant", cascade="all, delete")
-    attributes = relationship("Attribute", back_populates="variant", cascade="all, delete")
+    product = relationship("Product", back_populates="variants")
+    image_groups = relationship(
+        "ImageGroup", back_populates="product_variant",
+        cascade="all, delete-orphan", passive_deletes=True,
+    )
+    attributes = relationship(
+        "Attribute", back_populates="variant",
+        cascade="all, delete-orphan", passive_deletes=True,
+    )
 
 
 class ImageGroup(BaseModel):
     '''
     This table stores images for each product. For example, a laptop product might have multiple images showing different angles of the laptop, close-ups of the keyboard, and images of the laptop in use. Each image is linked to a specific product.'''
     __tablename__ = "image_group"
+    __table_args__ = (
+        CheckConstraint(
+            "(product_id IS NOT NULL) <> (variant_id IS NOT NULL)",
+            name="ck_image_group_owner",
+        ),
+    )
 
     title = Column(String)
     group_type = Column(String)
     description = Column(String)
 
-    product_id = Column(Integer, ForeignKey("products.id"))
-    variant_id = Column(Integer, ForeignKey("product_variants.id"), nullable=True)
+    product_id = Column(Integer, ForeignKey("products.id", ondelete="CASCADE"), nullable=True)
+    variant_id = Column(Integer, ForeignKey("product_variants.id", ondelete="CASCADE"), nullable=True)
     # Relationships
     product = relationship("Product", back_populates="image_groups")
-    image_links = relationship("Image", back_populates="group", cascade='all, delete')
+    image_links = relationship(
+        "Image", back_populates="group",
+        cascade="all, delete-orphan", passive_deletes=True,
+    )
     product_variant = relationship("ProductVariant", back_populates="image_groups")
 
 class Image(BaseModel):
@@ -103,7 +119,7 @@ class Image(BaseModel):
     image_url = Column(String)
     alt_text = Column(String(255))
     format = Column(String(50))
-    group_id = Column(Integer, ForeignKey('image_group.id'))
+    group_id = Column(Integer, ForeignKey('image_group.id', ondelete="CASCADE"), nullable=False)
     
     # relationship
     group = relationship("ImageGroup", back_populates="image_links")
@@ -114,7 +130,7 @@ class ProductVideos(BaseModel):
     This table stores videos for each product. For example, a laptop product might have a video showcasing its features and performance. Each video is linked to a specific product.'''
     __tablename__ = "product_videos"
 
-    product_id = Column(Integer, ForeignKey("products.id"))
+    product_id = Column(Integer, ForeignKey("products.id", ondelete="CASCADE"), nullable=False)
 
     video_url = Column(String)
     title = Column(String(255))
@@ -134,8 +150,8 @@ class ProductTag(BaseModel):
     Product tags are used to label products with specific attributes or characteristics that can help customers find and filter products. For example, tags like "New Arrival", "Best Seller", "Discounted", etc. can be used to highlight certain products and make them more discoverable. Each product can have multiple tags, and each tag can be associated with multiple products.'''
     __tablename__ = "product_tags"
 
-    product_id = Column(Integer, ForeignKey("products.id"))
-    tag_id = Column(Integer, ForeignKey("tags.id"))
+    product_id = Column(Integer, ForeignKey("products.id", ondelete="CASCADE"), nullable=False)
+    tag_id = Column(Integer, ForeignKey("tags.id"), nullable=False)
 
 
     # Relationships
@@ -196,8 +212,8 @@ class ProductBadge(BaseModel):
     Product badges are used to label products with specific attributes or characteristics that can help customers find and filter products. For example, badges like "New Arrival", "Best Seller", "Discounted", etc. can be used to highlight certain products and make them more discoverable. Each product can have multiple badges, and each badge can be associated with multiple products.'''
     __tablename__ = "product_badges"
 
-    product_id = Column(Integer, ForeignKey("products.id"))
-    badge_id = Column(Integer, ForeignKey("badges.id"))
+    product_id = Column(Integer, ForeignKey("products.id", ondelete="CASCADE"), nullable=False)
+    badge_id = Column(Integer, ForeignKey("badges.id"), nullable=False)
 
     # Relationships
     # product = relationship(
@@ -242,55 +258,74 @@ class Product(BaseModel):
 
     brand_table = relationship("Brand", back_populates="products")
     cat = relationship("Category",  back_populates="products")
-    inventory_summary  = relationship("InventorySummary", back_populates="product", uselist=False, cascade="all, delete")
-    seo = relationship("ProductSEO", back_populates="product", uselist=False, cascade="all, delete")
-    seo_keywords = relationship("SEOKeyword", back_populates="product", cascade="all, delete")
-    search_keywords = relationship("SearchKeyword", back_populates="product", cascade="all, delete")
+    inventory_summary = relationship(
+        "InventorySummary", back_populates="product", uselist=False,
+        cascade="all, delete-orphan", passive_deletes=True,
+    )
+    seo = relationship(
+        "ProductSEO", back_populates="product", uselist=False,
+        cascade="all, delete-orphan", passive_deletes=True,
+    )
+    seo_keywords = relationship(
+        "SEOKeyword", back_populates="product",
+        cascade="all, delete-orphan", passive_deletes=True,
+    )
+    search_keywords = relationship(
+        "SearchKeyword", back_populates="product",
+        cascade="all, delete-orphan", passive_deletes=True,
+    )
 
     # subcategory = relationship("Category", foreign_keys=[subcategory], back_populates="products")
     specifications = relationship(
         "SpecificationType",
         back_populates="product",
-        cascade="all, delete"
+        cascade="all, delete-orphan", passive_deletes=True,
     )
 
     descriptions = relationship(
         "Description",
         back_populates="product",
-        cascade="all, delete"
+        cascade="all, delete-orphan", passive_deletes=True,
     )
 
-    questions = relationship(
-        "Question",
-        back_populates="product",
-        cascade="all, delete"
-    )
-
-    reviews = relationship(
-        "Review",
-        back_populates="product",
-        cascade="all, delete"
-    )
+    # Questions and reviews are user-generated records: deleting a product is
+    # intentionally blocked while they reference it.
+    questions = relationship("Question", back_populates="product")
+    reviews = relationship("Review", back_populates="product")
     image_groups = relationship(
         "ImageGroup",
         back_populates="product",
-        cascade="all, delete"
+        cascade="all, delete-orphan", passive_deletes=True,
     )
 
 
     videos = relationship(
         'ProductVideos',
         back_populates='product',
-        cascade='all, delete'
+        cascade="all, delete-orphan", passive_deletes=True,
     )
     
-    variants = relationship("ProductVariant", back_populates="product", cascade="all, delete")
+    variants = relationship(
+        "ProductVariant", back_populates="product",
+        cascade="all, delete-orphan", passive_deletes=True,
+    )
     tags = relationship(
         "Tag",
         secondary="product_tags",
-        back_populates="products"
+        back_populates="products", passive_deletes=True,
     )
-    badges = relationship("Badge", secondary="product_badges", back_populates="products")
+    badges = relationship(
+        "Badge", secondary="product_badges", back_populates="products",
+        passive_deletes=True,
+    )
+    related_products = relationship(
+        "RelatedProduct", foreign_keys="RelatedProduct.product_id",
+        back_populates="product", cascade="all, delete-orphan", passive_deletes=True,
+    )
+    related_by_products = relationship(
+        "RelatedProduct", foreign_keys="RelatedProduct.related_product_id",
+        back_populates="related_product", cascade="all, delete-orphan", passive_deletes=True,
+    )
 
 # ===========================
 # Related Products Table
@@ -301,19 +336,19 @@ class RelatedProduct(BaseModel):
     The RelatedProduct table represents the relationships between products that are related to each other. For example, a laptop product might have related products such as laptop bags, external hard drives, or other laptops with similar specifications. Each related product is linked to a specific product. This allows customers to easily find complementary products or alternatives when viewing a product.'''
     __tablename__ = "related_products"
 
-    product_id = Column(Integer, ForeignKey("products.id"))
-    related_product_id = Column(Integer, ForeignKey("products.id"))
+    product_id = Column(Integer, ForeignKey("products.id", ondelete="CASCADE"), nullable=False)
+    related_product_id = Column(Integer, ForeignKey("products.id", ondelete="CASCADE"), nullable=False)
 
     # Relationships
     product = relationship(
         "Product",
         foreign_keys=[product_id],
-        backref="related_to"
+        back_populates="related_products"
     )
     related_product = relationship(
         "Product",
         foreign_keys=[related_product_id],
-        backref="related_from"
+        back_populates="related_by_products"
     )
 
 
@@ -343,7 +378,7 @@ class Brand(BaseModel):
     products = relationship(
         "Product",
         back_populates="brand_table",
-        cascade="all, delete"
+        # Brands are shared master data; product deletion must never propagate here.
     )
 
 # =========================
@@ -373,7 +408,7 @@ class Category(BaseModel):
     products = relationship(
         "Product",
         back_populates="cat",
-        cascade="all, delete"
+        # Categories are shared master data; product deletion must never propagate here.
     )
     parent = relationship(
         "Category",
@@ -397,7 +432,7 @@ class InventorySummary(BaseModel):
     The InventorySummary table provides a summary of the inventory for each product. It includes information such as the total stock available, the number of variants in stock, and the number of variants out of stock. This table can be used to quickly assess the inventory status of each product and make informed decisions about restocking and inventory management. Each inventory summary is linked to a specific product.'''
     __tablename__ = "inventory_summaries"
 
-    product_id = Column(Integer, ForeignKey("products.id"))
+    product_id = Column(Integer, ForeignKey("products.id", ondelete="CASCADE"), nullable=False, unique=True)
 
     available = Column(Integer, default=0)
     reserved = Column(Integer, default=0)
@@ -426,7 +461,7 @@ class SpecificationType(BaseModel):
 
     type = Column(String(100), nullable=False)
 
-    product_id = Column(Integer, ForeignKey("products.id"))
+    product_id = Column(Integer, ForeignKey("products.id", ondelete="CASCADE"), nullable=False)
 
     # Relationships
     product = relationship(
@@ -437,7 +472,7 @@ class SpecificationType(BaseModel):
     specification_values = relationship(
         "SpecificationValue",
         back_populates="specification_type",
-        cascade="all, delete"
+        cascade="all, delete-orphan", passive_deletes=True,
     )
 
 
@@ -458,7 +493,8 @@ class SpecificationValue(BaseModel):
 
     specification_type_id = Column(
         Integer,
-        ForeignKey("specification_types.id")
+        ForeignKey("specification_types.id", ondelete="CASCADE"),
+        nullable=False,
     )
 
     # Relationships
@@ -480,7 +516,7 @@ class Description(BaseModel):
 
     text = Column(Text)
 
-    product_id = Column(Integer, ForeignKey("products.id"))
+    product_id = Column(Integer, ForeignKey("products.id", ondelete="CASCADE"), nullable=False)
 
     # Relationships
     product = relationship(
@@ -562,7 +598,7 @@ class CompareItem(Base):
 
     id = Column(Integer, primary_key=True)
     user_id = Column(Integer, ForeignKey("users.id"))
-    product_id = Column(Integer, ForeignKey("products.id"))
+    product_id = Column(Integer, ForeignKey("products.id", ondelete="CASCADE"), nullable=False)
     created_at = Column(DateTime, default=func.now())
     # Relationships
     product = relationship("Product")   
@@ -578,7 +614,7 @@ class ProductSEO(BaseModel):
     The ProductSEO table stores SEO-related information for each product. This includes fields such as meta title, meta description, and meta keywords, which are used to optimize the product's visibility in search engine results. Each SEO entry is linked to a specific product, allowing for customized SEO settings for each product in the store.'''
     __tablename__ = "product_seo"
 
-    product_id = Column(Integer, ForeignKey("products.id"))
+    product_id = Column(Integer, ForeignKey("products.id", ondelete="CASCADE"), nullable=False, unique=True)
 
     meta_title = Column(String(255))
     meta_description = Column(Text)
@@ -603,7 +639,7 @@ class SEOKeyword(BaseModel):
     The SEOKeyword table stores individual SEO keywords for each product. These keywords can be used to further optimize the product's visibility in search engine results. Each keyword is linked to a specific product, allowing for a list of relevant keywords that can help improve the product's search ranking.'''
     __tablename__ = "seo_keywords"
 
-    product_id = Column(Integer, ForeignKey("products.id"))
+    product_id = Column(Integer, ForeignKey("products.id", ondelete="CASCADE"), nullable=False)
 
     keyword = Column(String(255))
 
@@ -625,7 +661,7 @@ class SearchKeyword(BaseModel):
     The SearchKeyword table stores keywords that customers have used to search for products. This information can be used to analyze search trends and optimize product listings based on popular search terms. Each search keyword is linked to a specific product, allowing for insights into which products are being searched for with specific keywords.'''
     __tablename__ = "search_keywords"
 
-    product_id = Column(Integer, ForeignKey("products.id"))
+    product_id = Column(Integer, ForeignKey("products.id", ondelete="CASCADE"), nullable=False)
 
     keyword = Column(String(255))
 

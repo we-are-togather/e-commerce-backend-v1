@@ -47,13 +47,15 @@ class ProductFilter(BaseModel):
 # product Specification Schemas
 # ============================================
 class SpecificationSchema(BaseModel):
-    label: str
-    value: str
+    id:Optional[int] = None 
+    label: Optional[str] = None
+    value: Optional[str] = None
     unit:Optional[str] = None
 
 class SpecificationGroup(BaseModel):
-    group_name:str
-    specification_value:List[SpecificationSchema]
+    id:Optional[int] = None 
+    group_name:Optional[str] = None
+    specification_value:List[SpecificationSchema]=[]
 
 
 
@@ -63,32 +65,36 @@ class SpecificationGroup(BaseModel):
 
 # Additional
 class Publishing(BaseModel):
-    status: str
-    feature_product:bool
-    search_boost:int
+    id:Optional[int] = None 
+    status: Optional[str] = None
+    feature_product:Optional[bool] = None
+    search_boost:Optional[int] = None
 
 class SEO(BaseModel):
-    meta_title: str
-    meta_description: str
+    id:Optional[int] = None
+    meta_title: Optional[str] = None
+    meta_description: Optional[str] = None
     meta_keywords:Optional[str] = None
-    canonical_url:str
-    open_graph_image:str
-    index:bool
+    canonical_url:Optional[str] = None
+    open_graph_image:Optional[str] = None
+    index:Optional[bool] = None
 
 
 
 class VariantAttribute(BaseModel):
-    key:str
-    value:str
+    id:Optional[int] = None
+    key:Optional[str] = None
+    value:Optional[str] = None
 
 class Variant(BaseModel):
+    id:Optional[int] = None
     name:Optional[str] = None
-    sku:str
-    price: float
-    compare_at_price:float
-    inventory:int
-    status:str
-    attributes:List[VariantAttribute]
+    sku:Optional[str] = None
+    price: Optional[float] = None
+    compare_at_price:Optional[float] = None
+    inventory:Optional[int] = None
+    status:Optional[str] = None
+    attributes:List[VariantAttribute] = None
 
 
 # Media
@@ -97,72 +103,129 @@ class Variant(BaseModel):
 #     image_url:str
 
 class Image(BaseModel):
+    id:Optional[int] = None
     image_url:Optional[str] = None
     image_name:Optional[str] = None
-    alt_text:str
+    alt_text:Optional[str] = None
 
 class ImageGroup(BaseModel):
-    title: str
-    group_type: str
+    id:Optional[int] = None
+    product_id:Optional[int] = None
+    variant_id:Optional[int] = None
+    title: Optional[str] = None
+    group_type: Optional[str] = None
     description: Optional[str] = None
     variant_sku:Optional[str] = None
-    images: List[Image]
+    images: Optional[List[Image]]= []
 
 class Video(BaseModel):
-    platform: str
-    url: str
+    id:Optional[int] = None
+    platform: Optional[str] = None
+    url: Optional[str] = None
     title: Optional[str] = None
 
 
 
 class DescriptionSchema(BaseModel):
-    title: str
-    text: str
+    id:Optional[int] = None
+    title: Optional[str] = None
+    text: Optional[str] = None
 
 class Organization(BaseModel):
-    brand: str
-    category: str
-    status: str
-    model: str
+    brand: Optional[str] = None
+    category: Optional[str] = None
+    status: Optional[str] = None
+    model: Optional[str] = None
 
 class Category(BaseModel):
-    name:str
-    description:str
-    status:Status
+    id:Optional[int] = None
+    name:Optional[str] = None
+    description:Optional[str] = None
+    status:Optional[Status] = None
     parent:Optional[str] = None
     logo_url:Optional[str] = None
 
+class RelatedProduct(BaseModel):
+    id:Optional[int] = None
+    related_product_id:Optional[int] = None
 
-class ProductCreateSchema(BaseModel):
-    name: str
-    status: str
+class TagSchema(BaseModel):
+    id:Optional[int] = None
+    name:Optional[str] = None
+
+class BadgeSchema(BaseModel):
+    id:Optional[int] = None
+    name: Optional[str] = None
+
+class ProductUpdateSchema(BaseModel):
+    id:Optional[int] = None
+    name: Optional[str] = None
+    status: Optional[str] = None
+
     price: Optional[float] = None
     compare_at_price: Optional[float] = None
     quantity: Optional[int] = None
     product_code: Optional[str]  = None
-    brand: int
-    model: str
-    category: int
-    short_description: str
-    description: List[DescriptionSchema]
-    specifications: List[SpecificationGroup]
+
+    brand: Optional[int] = None
+    model: Optional[str] = None
+    category: Optional[int] = None
+    short_description: Optional[str] = None
+    description: List[DescriptionSchema] = []
+    specifications: List[SpecificationGroup] = []
     
     
-    variants:List[Variant]
+    variants:List[Variant] = []
     
 
     # additional 
-    tags:List[str]
-    badges:List[str]
-    publishing:Publishing
-    seo:SEO
+    tags:List[TagSchema] = []
+    badges:List[BadgeSchema] = []
+    publishing:Optional[Publishing] = None
+    seo:List[Optional[SEO]] = None
 
-    related_products:List[int]
+    related_products:Optional[List[RelatedProduct]] = None
 
     # media
-    video:List[Video]
-    thumbnail: str
-    image_groups: List[ImageGroup]
+    video:Optional[List[Video]] = []
+    thumbnail: Optional[str] = None
+    image_groups: Optional[List[ImageGroup]] = []
+
+
+
+class ProductCreateSchema(BaseModel):
+    id:Optional[int] = None
+    name: Optional[str] = None
+    status: Optional[str] = None
+
+    price: Optional[float] = None
+    compare_at_price: Optional[float] = None
+    quantity: Optional[int] = None
+    product_code: Optional[str]  = None
+
+    brand: Optional[int] = None
+    model: Optional[str] = None
+    category: Optional[int] = None
+    short_description: Optional[str] = None
+    description: List[DescriptionSchema] = []
+    specifications: List[SpecificationGroup] = []
+    
+    
+    variants:List[Variant] = []
+    
+
+    # additional 
+    tags:List[str] = []
+    badges:List[str] = []
+    publishing:Optional[Publishing] = None
+    seo:Optional[List[SEO]] = []
+
+    related_products:Optional[List[int]] = []
+
+    # media
+    video:Optional[List[Video]] = []
+    thumbnail: Optional[str] = None
+    image_groups: Optional[List[ImageGroup]] = []
 
 
 
