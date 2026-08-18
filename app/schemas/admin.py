@@ -112,22 +112,23 @@ class ListByFilter(BaseModel):
     max_price:Optional[str] = None
 
 class ProductResponse(BaseModel):
-    id: int
-    name: str
-    status:str
-    category:str
-    min_price:Decimal
-    max_price:Decimal
-    quantitiy:int
-    product_code:str
-    brand:str
-    model:str
+    id: Optional[int] = None
+    name: Optional[str] = None
+    status:Optional[str] = None
+    category:Optional[str] = None
+    min_price:Optional[Decimal] = None
+    max_price:Optional[Decimal] = None
+    quantitiy:Optional[int] = None
+    product_code:Optional[str] = None
+    brand:Optional[str] = None
+    model:Optional[str] = None
+    image_url:Optional[str] = None
 
 
 class ProductListItemSchema(BaseModel):
-    total: int
-    page: int
-    limit: int
+    total: Optional[int] = None
+    page: Optional[int] = None
+    limit: Optional[int] = None
     products:List[ProductResponse]
 
 class ProductListResponseSchema(BaseResponse):

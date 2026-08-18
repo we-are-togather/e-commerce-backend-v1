@@ -328,6 +328,7 @@ async def get_data_by_filter(db, model,is_first=True, **kwargs):
         )
 
     total = await repo.count(filters=kwargs["filters"])
+    
     return await repo.all(
             **kwargs
         ), total

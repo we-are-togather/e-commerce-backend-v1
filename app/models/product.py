@@ -9,8 +9,10 @@ from sqlalchemy import (
     ForeignKey,
     DateTime,
     func,
-    Boolean, CheckConstraint, DECIMAL
+    Boolean, CheckConstraint, DECIMAL,
+    Sequence
 )
+
 from sqlalchemy import Table, Column, Integer, ForeignKey, text
 
 from sqlalchemy.orm import relationship
@@ -36,25 +38,6 @@ class Attribute(BaseModel):
     
     variant = relationship("ProductVariant", back_populates='attributes')
 
-# class ProductVariantAttribute(Base):
-#     '''
-#     This table links product variants to their specific attribute values. For example, it would link the Red-S variant of a T-shirt to the "Red" value of the "Color" attribute and the "S" value of the "Size" attribute.'''
-#     __tablename__ = "product_variant_attributes"
-
-#     id = Column(Integer, primary_key=True)
-
-#     product_variant_id = Column(
-#         Integer,
-#         ForeignKey("product_variants.id")
-#     )
-
-#     attribute_value_id = Column(
-#         Integer,
-#         ForeignKey("attribute_values.id")
-#     )
-
-#     # is_featured = Column(Boolean, default=False)
-#     product_variant = relationship("ProductVariant", back_populates="attributes")
 
 class ProductVariant(Base):
     '''
@@ -93,10 +76,17 @@ class ImageGroup(BaseModel):
     '''
     This table stores images for each product. For example, a laptop product might have multiple images showing different angles of the laptop, close-ups of the keyboard, and images of the laptop in use. Each image is linked to a specific product.'''
     __tablename__ = "image_group"
+    # __table_args__ = (
+    #     CheckConstraint(
+    #         "(product_id IS NOT NULL) <> (variant_id IS NOT NULL)",
+    #         name="ck_image_group_owner",
+    #     ),
+    # )
+    
     __table_args__ = (
-        CheckConstraint(
-            "(product_id IS NOT NULL) <> (variant_id IS NOT NULL)",
-            name="ck_image_group_owner",
+    CheckConstraint(
+        "product_id IS NOT NULL OR variant_id IS NOT NULL",
+        name="ck_image_group_owner",
         ),
     )
 
@@ -223,7 +213,11 @@ class ProductBadge(BaseModel):
     # )
     # badges = relationship("Badge", back_populates="products")
 
-    
+
+product_code_seq = Sequence("product_code_seq", start=1000)
+
+
+
 class Product(BaseModel):
     '''
     The main product table that contains general information about the product. Each product can have multiple variants (e.g., different sizes or colors) and multiple specifications (e.g., RAM, Storage).'''
@@ -231,6 +225,7 @@ class Product(BaseModel):
     name = Column(String(255), nullable=False)
 
     status = Column(String(50))
+    base_code = Column(String, unique=True)
 
     category = Column(Integer, ForeignKey("categories.id"))
     # subcategory = Column(Integer, ForeignKey("categories.id"), nullable=True)
@@ -614,7 +609,7 @@ class ProductSEO(BaseModel):
     The ProductSEO table stores SEO-related information for each product. This includes fields such as meta title, meta description, and meta keywords, which are used to optimize the product's visibility in search engine results. Each SEO entry is linked to a specific product, allowing for customized SEO settings for each product in the store.'''
     __tablename__ = "product_seo"
 
-    product_id = Column(Integer, ForeignKey("products.id", ondelete="CASCADE"), nullable=False, unique=True)
+    product_id = Column(Integer, ForeignKey("products.id", ondelete="CASCADE"), nullable=False)
 
     meta_title = Column(String(255))
     meta_description = Column(Text)

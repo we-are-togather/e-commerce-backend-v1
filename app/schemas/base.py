@@ -49,7 +49,8 @@ class BaseResponse(GenericModel, Generic[T]):
     success:bool = Field(description='success of the request')
     message: str = Field(description='message of the status')
     lang: str = Field(description='language which you are return')
-    data:List[Optional[Dict]]
+    # data:List[Optional[Dict]]
+    data:T
     warnings:WarningMessage|None = None
     meta:Meta
 

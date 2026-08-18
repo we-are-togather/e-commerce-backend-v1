@@ -79,29 +79,6 @@ class SEO(BaseModel):
     open_graph_image:Optional[str] = None
     index:Optional[bool] = None
 
-
-
-class VariantAttribute(BaseModel):
-    id:Optional[int] = None
-    key:Optional[str] = None
-    value:Optional[str] = None
-
-class Variant(BaseModel):
-    id:Optional[int] = None
-    name:Optional[str] = None
-    sku:Optional[str] = None
-    price: Optional[float] = None
-    compare_at_price:Optional[float] = None
-    inventory:Optional[int] = None
-    status:Optional[str] = None
-    attributes:List[VariantAttribute] = None
-
-
-# Media
-# class Thumbnail(BaseModel):
-#     name:str
-#     image_url:str
-
 class Image(BaseModel):
     id:Optional[int] = None
     image_url:Optional[str] = None
@@ -115,8 +92,35 @@ class ImageGroup(BaseModel):
     title: Optional[str] = None
     group_type: Optional[str] = None
     description: Optional[str] = None
-    variant_sku:Optional[str] = None
+    temp_key:Optional[str] = None
     images: Optional[List[Image]]= []
+
+
+class VariantAttribute(BaseModel):
+    id:Optional[int] = None
+    key:Optional[str] = None
+    value:Optional[str] = None
+
+class Variant(BaseModel):
+    id:Optional[int] = None
+    name:Optional[str] = None
+    sku:Optional[str] = None
+    temp_key:Optional[str] = None
+
+    price: Optional[float] = None
+    compare_at_price:Optional[float] = None
+    inventory:Optional[int] = None
+    status:Optional[str] = None
+    attributes:List[VariantAttribute] = None
+    image_groups:List[ImageGroup] = None
+
+
+# Media
+# class Thumbnail(BaseModel):
+#     name:str
+#     image_url:str
+
+
 
 class Video(BaseModel):
     id:Optional[int] = None
@@ -152,6 +156,12 @@ class RelatedProduct(BaseModel):
 class TagSchema(BaseModel):
     id:Optional[int] = None
     name:Optional[str] = None
+
+class TagFilter(BaseModel):
+    page_num: int = Field(default=1, ge=1)
+    per_page: int = Field(default=20, ge=1, le=100)
+    search: str | None = None
+    
 
 class BadgeSchema(BaseModel):
     id:Optional[int] = None
@@ -229,15 +239,18 @@ class ProductCreateSchema(BaseModel):
 
 
 
-
-
-
-
 # ============================================
-#      product List response schema
+#      Variant Response Schema
 # ============================================
+class VariantData(BaseModel):
+    variant:Variant
+    image_groups:Optional[List[ImageGroup]] = None
 
+class VariantResponse(BaseResponse):
+    data:VariantData
 
+class VariantListResponse(BaseResponse):
+    data:List[VariantData]
 
 
 # ============================================

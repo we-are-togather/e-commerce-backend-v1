@@ -1,0 +1,1 @@
+"""Product badge relationship services."""
