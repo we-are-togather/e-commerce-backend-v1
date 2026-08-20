@@ -45,11 +45,12 @@ class PromotionStatus(str, Enum):
     ARCHIVED = "archived"
 
 class TargetType(str, Enum):
-    PRODUCT = "PRODUCT"
-    CATEGORY = "CATEGORY"
-    BRAND = "BRAND"
-    CUSTOMER_SEGMENT = "CUSTOMER_SEGMENT"
-    ALL = "ALL"
+    PRODUCT = "product"
+    CATEGORY = "category"
+    BRAND = "brand"
+    CUSTOMER_SEGMENT = "customer_segment"
+    ALL = "all"
+    
 
 class DiscountType(str, Enum):
     PERCENTAGE = "PERCENTAGE"
@@ -71,6 +72,7 @@ class BundleDiscountType(str, Enum):
 
 class RuleType(str, Enum):
     MINIMUM_ORDER_AMOUNT = "minimum_order_amount"
+    MAXIMUM_ORDER_AMOUNT = "maximum_order_amount"
     MINIMUM_QUANTITY = "minimum_quantity"
     MAXIMUM_QUANTITY = "maximum_quantity"
     CUSTOMER_GROUP = "customer_group"

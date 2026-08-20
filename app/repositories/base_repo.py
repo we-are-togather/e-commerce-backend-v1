@@ -320,6 +320,13 @@ async def add_data(db, model, data, is_commit=True):
         await db.commit()   
     return output
 
+async def add_bulk_data(db, model, data, is_commit=True):
+    repo = BaseGeneric(model, db)
+    output = await repo.bulk_create(data)
+    if is_commit:
+        await db.commit()   
+    return output
+
 async def get_data_by_filter(db, model,is_first=True, **kwargs):
     repo = BaseGeneric(model, db)
     if is_first :

@@ -12,7 +12,8 @@ from app.enums.discount_enums import (
     RewardType,
     TargetType,
     TargetRole,
-    PromotionStatus
+    PromotionStatus,
+    PromotionTargetType
 )
 
 from app.schemas.base import BaseResponse
@@ -24,11 +25,12 @@ from app.schemas.base import BaseResponse
 
 class PromotionRuleCreate(BaseModel):
     id:Optional[int] = None
-    rule_type: RuleType
-    operator: RuleOperator
-    value: Any
-    is_active:bool
-    logical_group: int = 1
+    rule_type: Optional[RuleType] = None
+    operator: Optional[RuleOperator] = None
+    value: Optional[Any] = None
+    is_active:Optional[bool] = None
+    logical_group: Optional[int] = None
+    priority: Optional[int] = None
     # sort_order: int = 1
 
 
@@ -59,14 +61,14 @@ class PromotionActionCreate(BaseModel):
     ]
 """
     id:Optional[int] = None
-    reward_type: RewardType
+    reward_type: Optional[RewardType] = None
 
     # JSON that depends on reward_type
-    action_config: dict[str, Any]
+    action_config: Optional[dict[str, Any]] = None
 
-    sort_order: int = 1
+    sort_order: Optional[int] = None
 
-    notes:str
+    notes:Optional[str] = None
 
 
 # --------------------------
@@ -75,11 +77,11 @@ class PromotionActionCreate(BaseModel):
 
 class PromotionTargetCreate(BaseModel):
     id:Optional[int] = None
-    target_type: TargetType
+    target_type: Optional[PromotionTargetType] = None
 
     target_id: Optional[int] = None
 
-    target_role: TargetRole
+    target_role: Optional[TargetType] = None
 
     excluded: bool = False
 
@@ -107,23 +109,23 @@ class PromotionCouponCreate(BaseModel):
 
 class PromotionCreate(BaseModel):
     id:Optional[int] = None
-    name: str = Field(..., max_length=255)
+    name: str = Field(None, max_length=255)
 
     description: Optional[str] = None
-    code:str
-    status:PromotionStatus
+    code:Optional[str] = None
+    status:Optional[PromotionStatus] = None
     promotion_type: Optional[int|str] = None
 
-    priority: int = 0
+    priority: Optional[int] = None
 
-    stackable: bool = False
+    stackable: Optional[bool] = None
 
-    coupon_required: bool = False
+    coupon_required: Optional[bool] = None
 
     start_at: Optional[datetime] = None
 
     end_at: Optional[datetime] = None
-    is_active:Optional[str] = None
+    # is_active:Optional[str] = None
     
     usage_limit: Optional[int] = None
     total_usage:Optional[int] = None
@@ -148,8 +150,18 @@ class PromotionResponse(BaseResponse):
 
 
 class PromotionFilter(BaseModel):
-    promotion_type_id:Optional[int] = None
+    page_num: int = Field(default=1, ge=1)
+    per_page: int = Field(default=20, ge=1, le=100)
+    search: str | None = None
+
+    promotion_type:Optional[str] = None
     status:Optional[PromotionStatus] = None
+    min_usage_limit: Optional[int] = None
+    max_usage_limit: Optional[int] = None
+
+    sort_by: str = "created_at"
+    sort_order: str = "desc"
+
     start_date:Optional[datetime] = None
     end_date:Optional[datetime]=None
 

@@ -27,7 +27,8 @@ from app.enums.discount_enums import *
 
 class Promotions(BaseModel):
     __tablename__ = "promotions"
-    promotion_type_id = Column(Integer, ForeignKey('promotion_types.id', ondelete="CASCADE"))
+    # promotion_type_id = Column(Integer, ForeignKey('promotion_types.id', ondelete="CASCADE"))
+    promotion_type = Column(sa_enum(PromotionType, "promotion_type_enum"), nullable=False)
     name = Column(String(150), nullable=False,)
 
     description = Column(Text,nullable=True,)
@@ -58,7 +59,7 @@ class Promotions(BaseModel):
 
     expires_at = Column(DateTime(timezone=True), nullable=False,)
 
-    is_active = Column( Boolean, default=True, nullable=False,)
+    # is_active = Column( Boolean, default=True, nullable=False,)
     
     coupon_required = Column(Boolean, default=False)
 
@@ -91,18 +92,18 @@ class Promotions(BaseModel):
         cascade="all, delete-orphan"
     )
 
-    promotion_type = relationship(
-        "PromotionType",
-        back_populates="promotions"
-    )
+    # promotion_type = relationship(
+    #     "PromotionType",
+    #     back_populates="promotions"
+    # )
 
 class PromotionType(BaseModel):
     __tablename__ = "promotion_types"
     code = Column(String(50))
-    name = Column(String(200))
+    name = Column(String(200), unique=True)
     is_active = Column(String(100), nullable=False)
     description = Column(String(300))
-    promotions = relationship("Promotions", back_populates='promotion_type')
+    # promotions = relationship("Promotions", back_populates='promotion_type')
 
 
 class PromotionRule(BaseModel):
